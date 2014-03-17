@@ -1,0 +1,48 @@
+# Eclipse stuff
+/.classpath
+/.project
+/.settings
+
+# netbeans
+/nbproject
+/nb-configuration.*
+
+#Idea
+/*.iml
+/*.ipr
+/*.iws
+/.idea
+/.idea_modules
+
+# ant
+/build.xml
+
+# maven
+/target
+
+/project/project
+/project/target
+
+# vim
+.*.sw[a-p]
+
+# various other potential build files
+/build
+/bin
+/dist
+/manifest.mf
+
+# Mac filesystem dust
+/.DS_Store
+
+# Log files
+/*.log
+
+project/target
+
+# backups
+*.*~
+/*.*~
+*~
+/*~
+
