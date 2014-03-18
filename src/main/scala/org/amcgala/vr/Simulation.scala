@@ -15,56 +15,56 @@ import org.amcgala.math.Vertex3f
 case class Position(x: Double, y: Double)
 
 /**
- * A Cell in the simulated world map.
- * @param cellType the [[CellTypes.CellType]] of the Cell.
- */
+  * A Cell in the simulated world map.
+  * @param cellType the [[CellTypes.CellType]] of the Cell.
+  */
 case class Cell(cellType: CellTypes.CellType)
 
 object SimulationAgent {
 
   /**
-   * Registers a new [[Bot]] with the [[SimulationAgent]].
-   * @param bot the [[ActorRef]] of the [[Bot]]
-   * @param position the [[Position]] in the simulated world
-   */
+    * Registers a new [[Bot]] with the [[SimulationAgent]].
+    * @param bot the [[ActorRef]] of the [[Bot]]
+    * @param position the [[Position]] in the simulated world
+    */
   case class Register(bot: ActorRef, position: Position)
 
   /**
-   * Removes a [[Bot]] from the [[SimulationAgent]]
-   */
+    * Removes a [[Bot]] from the [[SimulationAgent]]
+    */
   case object Unregister
 
   /**
-   * Changes the [[CellTypes.CellType]] of a Cell.
-   * @param position the [[Position]] of the [[Cell]] in the world
-   * @param cellType the new [[CellTypes.CellType]]
-   */
+    * Changes the [[CellTypes.CellType]] of a Cell.
+    * @param position the [[Position]] of the [[Cell]] in the world
+    * @param cellType the new [[CellTypes.CellType]]
+    */
   case class CellTypeChange(position: Position, cellType: CellTypes.CellType)
 
   /**
-   * Changes the [[Position]] of a [[Bot]].
-   * @param position the new position
-   */
+    * Changes the [[Position]] of a [[Bot]].
+    * @param position the new position
+    */
   case class PositionChange(position: Position)
 
   /**
-   * A position request from someone. The [[SimulationAgent]]'s response is the current position of the Bot.
-   * @param ref the [[ActorRef]] of the Bot
-   */
+    * A position request from someone. The [[SimulationAgent]]'s response is the current position of the Bot.
+    * @param ref the [[ActorRef]] of the Bot
+    */
   case class PositionRequest(ref: ActorRef)
 
   /**
-   * The SimulationAgent answers this message with a [[Cell]] instance if the [[ActorRef]] is known.
-   * @param ref the [[ActorRef]] of the requesting Bot
-   */
+    * The SimulationAgent answers this message with a [[Cell]] instance if the [[ActorRef]] is known.
+    * @param ref the [[ActorRef]] of the requesting Bot
+    */
   case class CellRequest(ref: ActorRef)
 
   /**
-   * The SimulationAgent answers this message with a List of ([[ActorRef]], [[Position]]) Tuples of all Bots that are
-   * in the vicinity of the requesting Bot.
-   * @param ref the [[ActorRef]] of the requesting Bot
-   * @param distance the radius of the vicinity
-   */
+    * The SimulationAgent answers this message with a List of ([[ActorRef]], [[Position]]) Tuples of all Bots that are
+    * in the vicinity of the requesting Bot.
+    * @param ref the [[ActorRef]] of the requesting Bot
+    * @param distance the radius of the vicinity
+    */
   case class VicinityRequest(ref: ActorRef, distance: Double)
 
   def props(width: Int, height: Int) = Props(new SimulationAgent(width, height))

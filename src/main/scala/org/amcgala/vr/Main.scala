@@ -1,5 +1,7 @@
 package org.amcgala.vr
 
+import org.amcgala.vr.capability.{ Health, Hunger, RandomWalk }
+
 /**
   * Startet die Simulation.
   */
@@ -10,19 +12,8 @@ object Main extends App {
     simulation.changeCellType(Position(simulation.width / 2, y), CellTypes.Forbidden)
   }
 
-  simulation.spawnBot(classOf[TestAgent], Position(20, 20))
-  simulation.spawnBot(classOf[TestAgent], Position(10, 20))
+  simulation.spawnBot(classOf[SimpleNPC], Position(20, 20))
+  simulation.spawnBot(classOf[SimpleNPC], Position(10, 20))
 }
 
-class TestAgent extends Bot with Health with Hunger with RandomWalk {
-
-  override def customBehaviour(): Unit = {
-    for {
-      vic ← vicinity(5)
-      n ← vic.headOption
-      h ← requestHeading(n._1)
-    } {
-      println(h)
-    }
-  }
-}
+class SimpleNPC extends Bot with Health with Hunger with RandomWalk

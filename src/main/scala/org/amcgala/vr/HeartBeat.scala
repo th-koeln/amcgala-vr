@@ -11,8 +11,8 @@ object HeartBeat {
 }
 
 /**
- * Publishes the [[HeartBeat.Tick]] messages to the [[akka.event.EventStream]] of the [[akka.actor.ActorSystem]].
- */
+  * Publishes the [[HeartBeat.Tick]] messages to the [[akka.event.EventStream]] of the [[akka.actor.ActorSystem]].
+  */
 class HeartBeat extends Actor {
 
   import concurrent.duration._

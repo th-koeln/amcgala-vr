@@ -9,8 +9,8 @@ package object vr {
   implicit val system = ActorSystem("vr-system")
 
   /**
-   * Possible headings of a [[Bot]].
-   */
+    * Possible headings of a [[Bot]].
+    */
   object Headings {
     /**
       * The Heading of a [[Bot]].
@@ -61,8 +61,8 @@ package object vr {
   }
 
   /**
-   * Possible [[CellTypes.CellType]]s of a [[Cell]] in the [[Simulation]]
-   */
+    * Possible [[CellTypes.CellType]]s of a [[Cell]] in the [[Simulation]]
+    */
   object CellTypes {
     sealed trait CellType {
       val movementCost: Double
