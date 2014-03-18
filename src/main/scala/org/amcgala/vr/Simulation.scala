@@ -22,18 +22,49 @@ case class Cell(cellType: CellTypes.CellType)
 
 object SimulationAgent {
 
+  /**
+   * Registers a new [[Bot]] with the [[SimulationAgent]].
+   * @param bot the [[ActorRef]] of the [[Bot]]
+   * @param position the [[Position]] in the simulated world
+   */
   case class Register(bot: ActorRef, position: Position)
 
+  /**
+   * Removes a [[Bot]] from the [[SimulationAgent]]
+   */
   case object Unregister
 
-  case class ChangeCellType(position: Position, cellType: CellTypes.CellType)
+  /**
+   * Changes the [[CellTypes.CellType]] of a Cell.
+   * @param position the [[Position]] of the [[Cell]] in the world
+   * @param cellType the new [[CellTypes.CellType]]
+   */
+  case class CellTypeChange(position: Position, cellType: CellTypes.CellType)
 
-  case class ChangePosition(position: Position)
+  /**
+   * Changes the [[Position]] of a [[Bot]].
+   * @param position the new position
+   */
+  case class PositionChange(position: Position)
 
+  /**
+   * A position request from someone. The [[SimulationAgent]]'s response is the current position of the Bot.
+   * @param ref the [[ActorRef]] of the Bot
+   */
   case class PositionRequest(ref: ActorRef)
 
+  /**
+   * The SimulationAgent answers this message with a [[Cell]] instance if the [[ActorRef]] is known.
+   * @param ref the [[ActorRef]] of the requesting Bot
+   */
   case class CellRequest(ref: ActorRef)
 
+  /**
+   * The SimulationAgent answers this message with a List of ([[ActorRef]], [[Position]]) Tuples of all Bots that are
+   * in the vicinity of the requesting Bot.
+   * @param ref the [[ActorRef]] of the requesting Bot
+   * @param distance the radius of the vicinity
+   */
   case class VicinityRequest(ref: ActorRef, distance: Double)
 
   def props(width: Int, height: Int) = Props(new SimulationAgent(width, height))
@@ -100,12 +131,12 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
         bot ! PoisonPill
       }
 
-    case ChangeCellType(position, cellType) ⇒
+    case CellTypeChange(position, cellType) ⇒
       if (field.exists(_._1 == position)) {
         field = field + (position -> Cell(cellType))
       }
 
-    case ChangePosition(position) ⇒
+    case PositionChange(position) ⇒
       if (field.exists(_._1 == position)) {
         if (field(position).cellType != CellTypes.Forbidden) {
           positions = positions + (sender() -> position)
@@ -141,11 +172,11 @@ class Simulation(val width: Int, val height: Int)(implicit system: ActorSystem) 
   private val sim = system.actorOf(SimulationAgent.props(width, height))
 
   /**
-    * Erzeugt einen neuen Bot und gibt die Referenz zurück.
-    * @param cls die Klasse des Bots
-    * @param position die Position des Bots
-    * @tparam T der Typ des Bots. Muss eine Unterklasse von [[Bot]] sein
-    * @return [[ActorRef]] des Bots
+    * Creates a new instance of a [[Bot]].
+    * @param cls the class of the bot, must be a subclass of [[Bot]]
+    * @param position the starting position of the bot
+    * @tparam T the class type of this bot
+    * @return [[ActorRef]]
     */
   def spawnBot[T <: Bot](cls: Class[T], position: Position): ActorRef = {
     val bot = system.actorOf(Props(cls))
@@ -160,7 +191,7 @@ class Simulation(val width: Int, val height: Int)(implicit system: ActorSystem) 
   }
 
   def changeCellType(position: Position, cellType: CellTypes.CellType) = {
-    sim ! ChangeCellType(position, cellType)
+    sim ! CellTypeChange(position, cellType)
   }
 
   def randomPosition(): Position = Position(Random.nextDouble() * width, Random.nextDouble() * height)

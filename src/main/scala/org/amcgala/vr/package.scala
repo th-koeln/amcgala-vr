@@ -8,10 +8,12 @@ package object vr {
 
   implicit val system = ActorSystem("vr-system")
 
+  /**
+   * Possible headings of a [[Bot]].
+   */
   object Headings {
     /**
-      * Die Blickrichtung des Agenten in relativen Koordinaten. Da es sich um ein direktes Feld handelt, wird einfach
-      * die Richtung zum nächsten Nachbarn angegeben, in die der Agent gerade blickt.
+      * The Heading of a [[Bot]].
       */
     sealed trait Heading {
       val x: Double
@@ -58,6 +60,9 @@ package object vr {
     }
   }
 
+  /**
+   * Possible [[CellTypes.CellType]]s of a [[Cell]] in the [[Simulation]]
+   */
   object CellTypes {
     sealed trait CellType {
       val movementCost: Double

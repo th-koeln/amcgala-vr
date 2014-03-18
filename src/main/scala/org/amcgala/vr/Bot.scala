@@ -109,7 +109,7 @@ trait Bot extends Agent {
     */
   def moveForward(): Unit = {
     for (pos ← position()) {
-      simulation ! SimulationAgent.ChangePosition(Position(pos.x + heading.x * velocity, pos.y + heading.y * velocity))
+      simulation ! SimulationAgent.PositionChange(Position(pos.x + heading.x * velocity, pos.y + heading.y * velocity))
     }
   }
 
@@ -118,7 +118,7 @@ trait Bot extends Agent {
     */
   def moveBackward(): Unit = {
     for (pos ← position()) {
-      simulation ! SimulationAgent.ChangePosition(Position(pos.x - heading.x * velocity, pos.y - heading.y * velocity))
+      simulation ! SimulationAgent.PositionChange(Position(pos.x - heading.x * velocity, pos.y - heading.y * velocity))
     }
   }
 
