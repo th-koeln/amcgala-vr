@@ -9,17 +9,17 @@ trait Hunger extends BotCapability {
   bot: Bot with Health ⇒
 
   var hunger: Int = 0
-  var ticks: Int = 0
+  var counter: Int = 0
 
   registerOnTickAction(() ⇒ {
-    ticks = (ticks + 1) % 1
+    counter = (counter + 1) % 5
 
-    if (ticks == 0) {
+    if (counter == 0) {
       hunger += 1
     }
 
-    if (hunger > 100 && ticks == 0) {
-      health -= 1
+    if (hunger > 100 && counter == 0) {
+      health -= hunger - 100
     }
   })
 }

@@ -3,7 +3,6 @@ package org.amcgala.vr
 import akka.actor.{ PoisonPill, ActorRef, ActorSystem, Props }
 import scala.util.Random
 import org.amcgala.{ RGBColor, Scene, FrameworkMode, Framework }
-import java.awt.Color
 import org.amcgala.shape.Rectangle
 import org.amcgala.math.Vertex3f
 
@@ -74,10 +73,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
   import SimulationAgent._
 
-  var field = (for {
-    x ← 0 until width
-    y ← 0 until height
-  } yield Position(x, y) -> Cell(CellTypes.Floor)).toMap
+  val field = Array.fill(width, height)(Cell(CellTypes.Floor))
 
   var positions = Map[ActorRef, Position]()
   val framework = Framework.getInstance(FrameworkMode.SOFTWARE)
@@ -85,44 +81,45 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
   val scaleX = framework.getWidth / width
   val scaleY = framework.getHeight / height
 
-  val rectangles = (for {
+  val rectangles = Array.ofDim[Rectangle](width, height)
+  for {
     x ← 0 until width
     y ← 0 until height
-  } yield {
+  } {
     val rect = new Rectangle(new Vertex3f(x * scaleX, y * scaleY, -1), scaleX, scaleY)
     rect.setColor(RGBColor.BLACK)
     scene.addShape(rect)
-    Position(x, y) -> rect
-  }).toMap
+    rectangles(x)(y) = rect
+  }
+
 
   framework.loadScene(scene)
 
   registerOnTickAction(() ⇒ {
-    for {
-      f ← field
-      r ← rectangles.get(f._1)
-    } {
-      f._2.cellType match {
-        case CellTypes.Floor     ⇒ r.setColor(RGBColor.WHITE)
-        case CellTypes.Forbidden ⇒ r.setColor(RGBColor.RED)
-        case CellTypes.Wall      ⇒ r.setColor(RGBColor.BLACK)
-      }
+
+    for{
+      x ← 0 until width
+      y ← 0 until height
+    }{
+      val cell = field(x)(y)
+      rectangles(x)(y).setColor(cell.cellType.color)
     }
 
-    for {
-      f ← positions
-      r ← rectangles.get(f._2)
-    } {
-      r.setColor(RGBColor.GREEN)
+    val posIt = positions.iterator
+
+    while (posIt.hasNext) {
+      val next = posIt.next()
+      rectangles(math.round(next._2.x).toInt)(math.round(next._2.y).toInt).setColor(RGBColor.GREEN)
     }
+
   })
 
   context.become(receive orElse tickHandling)
 
   def receive: Receive = {
     case Register(bot, position) ⇒
-      if (field.exists(_._1 == position)) {
-        if (field(position).cellType != CellTypes.Forbidden) {
+      if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
+        if (field(math.round(position.x).toInt)(math.round(position.y).toInt).cellType != CellTypes.Forbidden) {
           bot ! Bot.Introduction
           bot ! Bot.PositionChange(position)
           positions = positions + (bot -> position)
@@ -132,13 +129,13 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
       }
 
     case CellTypeChange(position, cellType) ⇒
-      if (field.exists(_._1 == position)) {
-        field = field + (position -> Cell(cellType))
+      if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height){
+        field(math.round(position.x).toInt)(math.round(position.y).toInt) = Cell(cellType)
       }
 
     case PositionChange(position) ⇒
-      if (field.exists(_._1 == position)) {
-        if (field(position).cellType != CellTypes.Forbidden) {
+      if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height){
+        if (field(math.round(position.x).toInt)(math.round(position.y).toInt).cellType != CellTypes.Forbidden) {
           positions = positions + (sender() -> position)
           sender() ! Bot.PositionChange(position)
         }
@@ -154,8 +151,8 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
       sender() ! positions.filter(t ⇒ Utils.distance(pos, t._2) < dis && t._1 != ref)
 
     case CellRequest(ref) ⇒
-      val pos = positions(ref)
-      sender() ! field(pos)
+      val position = positions(ref)
+      sender() ! field(math.round(position.x).toInt)(math.round(position.y).toInt)
 
     case Unregister ⇒
       positions = positions - sender()

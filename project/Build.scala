@@ -38,9 +38,8 @@ object VR extends Build {
     )
   )
 
-  lazy val amcgala = RootProject(file("../amcgala"))
 
-  lazy val root = Project(id = "vr", base = file("."), settings = projectSettings ++ formatSettings).aggregate(amcgala).dependsOn(amcgala)
+  lazy val root = Project(id = "vr", base = file("."), settings = projectSettings ++ formatSettings)
 }
 
 

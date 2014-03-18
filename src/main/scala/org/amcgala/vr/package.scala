@@ -66,18 +66,27 @@ package object vr {
   object CellTypes {
     sealed trait CellType {
       val movementCost: Double
+      val color: RGBColor
     }
 
     case object Floor extends CellType {
-      val movementCost: Double = 0.1
+      val movementCost: Double = 1
+      val color: RGBColor = RGBColor.WHITE
     }
 
     case object Wall extends CellType {
       val movementCost: Double = 1000
+      val color: RGBColor = new RGBColor(44, 64, 72)
+    }
+
+    case object Grass extends CellType {
+      val movementCost: Double = 1.2
+      val color: RGBColor = new RGBColor(110, 164, 70)
     }
 
     case object Forbidden extends CellType {
       val movementCost: Double = Double.PositiveInfinity
+      val color: RGBColor = RGBColor.RED
     }
   }
 

@@ -1,19 +1,21 @@
 package org.amcgala.vr
 
 import org.amcgala.vr.capability.{ Health, Hunger, RandomWalk }
+import scala.util.Random
 
 /**
   * Startet die Simulation.
   */
 object Main extends App {
-  val simulation = new Simulation(100, 100)
+  val simulation = new Simulation(400, 400)
 
   for (y ← 0 until simulation.height / 2) {
     simulation.changeCellType(Position(simulation.width / 2, y), CellTypes.Forbidden)
   }
 
-  simulation.spawnBot(classOf[SimpleNPC], Position(20, 20))
-  simulation.spawnBot(classOf[SimpleNPC], Position(10, 20))
+  for (i ← 0 until 200) {
+    simulation.spawnBot(classOf[SimpleNPC], Position(Random.nextInt(simulation.width), Random.nextInt(simulation.height)))
+  }
 }
 
 class SimpleNPC extends Bot with Health with Hunger with RandomWalk
