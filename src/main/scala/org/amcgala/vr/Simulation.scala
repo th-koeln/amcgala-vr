@@ -13,6 +13,8 @@ import org.amcgala.math.Vertex3f
   */
 case class Position(x: Double, y: Double)
 
+case class GridIndex(x: Int, y: Int)
+
 /**
   * A Cell in the simulated world map.
   * @param cellType the [[CellTypes.CellType]] of the Cell.
@@ -35,10 +37,10 @@ object SimulationAgent {
 
   /**
     * Changes the [[CellTypes.CellType]] of a Cell.
-    * @param position the [[Position]] of the [[Cell]] in the world
+    * @param gridIdx the [[Position]] of the [[Cell]] in the world
     * @param cellType the new [[CellTypes.CellType]]
     */
-  case class CellTypeChange(position: Position, cellType: CellTypes.CellType)
+  case class CellTypeChange(gridIdx: GridIndex, cellType: CellTypes.CellType)
 
   /**
     * Changes the [[Position]] of a [[Bot]].
@@ -57,6 +59,8 @@ object SimulationAgent {
     * @param ref the [[ActorRef]] of the requesting Bot
     */
   case class CellRequest(ref: ActorRef)
+
+  case class CellAtIdxRequest(gridIdx: GridIndex)
 
   /**
     * The SimulationAgent answers this message with a List of ([[ActorRef]], [[Position]]) Tuples of all Bots that are
@@ -114,7 +118,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
   })
 
-  context.become(receive orElse tickHandling)
+
 
   def receive: Receive = {
     case Register(bot, position) ⇒
@@ -128,9 +132,9 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
         bot ! PoisonPill
       }
 
-    case CellTypeChange(position, cellType) ⇒
-      if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height){
-        field(math.round(position.x).toInt)(math.round(position.y).toInt) = Cell(cellType)
+    case CellTypeChange(gridIdx, cellType) ⇒
+      if (gridIdx.x >= 0 && gridIdx.x < width && gridIdx.y >= 0 && gridIdx.y < height){
+        field(gridIdx.x)(gridIdx.y) = Cell(cellType)
       }
 
     case PositionChange(position) ⇒
@@ -154,6 +158,10 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
       val position = positions(ref)
       sender() ! field(math.round(position.x).toInt)(math.round(position.y).toInt)
 
+    case CellAtIdxRequest(idx) =>
+      if(idx.x >= 0 && idx.x < field.length && idx.y >= 0 && idx.y < field(0).length){
+        sender() ! field(idx.x)(idx.y)
+      }
     case Unregister ⇒
       positions = positions - sender()
 
@@ -187,8 +195,8 @@ class Simulation(val width: Int, val height: Int)(implicit system: ActorSystem) 
     bot
   }
 
-  def changeCellType(position: Position, cellType: CellTypes.CellType) = {
-    sim ! CellTypeChange(position, cellType)
+  def changeCellType(gridIdx: GridIndex, cellType: CellTypes.CellType) = {
+    sim ! CellTypeChange(gridIdx, cellType)
   }
 
   def randomPosition(): Position = Position(Random.nextDouble() * width, Random.nextDouble() * height)

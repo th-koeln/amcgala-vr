@@ -7,10 +7,10 @@ import scala.util.Random
   * Startet die Simulation.
   */
 object Main extends App {
-  val simulation = new Simulation(400, 400)
+  val simulation = new Simulation(200, 200)
 
   for (y ← 0 until simulation.height / 2) {
-    simulation.changeCellType(Position(simulation.width / 2, y), CellTypes.Forbidden)
+    simulation.changeCellType(GridIndex(simulation.width / 2, y), CellTypes.Forbidden)
   }
 
   for (i ← 0 until 200) {
@@ -18,4 +18,6 @@ object Main extends App {
   }
 }
 
-class SimpleNPC extends Bot with Health with Hunger with RandomWalk
+
+class SimpleNPC extends Bot
+with Health with Hunger with RandomWalk

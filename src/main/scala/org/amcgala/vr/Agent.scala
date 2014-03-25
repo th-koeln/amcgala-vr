@@ -10,12 +10,18 @@ trait Agent extends Actor {
 
   import HeartBeat._
 
-  context.system.eventStream.subscribe(self, Tick.getClass)
-
   /**
     * All registered actions that an [[Agent]] performs for every [[HeartBeat.Tick]]
     */
-  private var ticks: List[() ⇒ Unit] = List()
+  private var ticks: Vector[() ⇒ Unit] = Vector()
+
+  private var partials: Vector[Actor.Receive] = Vector()
+  private var customReceive: Receive = Actor.emptyBehavior
+
+
+
+  context.become(receive orElse tickHandling orElse customReceive)
+  context.system.eventStream.subscribe(self, Tick.getClass)
 
   /**
     * Adds the function to the actions that are performed every tick.
@@ -23,7 +29,7 @@ trait Agent extends Actor {
     */
   def registerOnTickAction(f: () ⇒ Unit): Unit = {
     // TODO this should be a Map (Handler -> Function)
-    ticks = f :: ticks
+    ticks = ticks :+ f
   }
 
   /**
@@ -33,7 +39,6 @@ trait Agent extends Actor {
   protected def tickHandling: Actor.Receive = {
     case HeartBeat.Tick ⇒
       onTick()
-      customBehaviour()
   }
 
   /**
@@ -45,8 +50,11 @@ trait Agent extends Actor {
     }
   }
 
-  /**
-    * Convenience function for a custom behavior that is executed on every [[HeartBeat.Tick]]
-    */
-  def customBehaviour(): Unit = {}
+
+  def registerCustomMessage(pf: Actor.Receive): Unit = {
+    partials = partials :+ pf
+    customReceive = partials.fold(Actor.emptyBehavior)(_ orElse _)
+    context.become(receive orElse tickHandling orElse customReceive)
+  }
+
 }

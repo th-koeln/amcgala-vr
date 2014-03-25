@@ -42,7 +42,7 @@ trait Bot extends Agent {
   var heading: Heading = Headings.Up
   var velocity: Int = 1
   var simulation: ActorRef = ActorRef.noSender
-  var customReceive = new PartialFunctionBuilder[Any, Unit]()
+
 
   override def postStop(): Unit = {
     simulation ! SimulationAgent.Unregister
@@ -53,7 +53,7 @@ trait Bot extends Agent {
       simulation = sender()
     case PositionChange(pos) ⇒
       localPosition = pos
-      context.become(positionHandling orElse tickHandling orElse custom)
+      context.become(positionHandling orElse tickHandling)
   }
 
   protected def positionHandling: Receive = {
@@ -135,7 +135,14 @@ trait Bot extends Agent {
   def cell(): Future[Cell] = (simulation ? SimulationAgent.CellRequest(self)).mapTo[Cell]
 
   /**
-    * Gets the current [[Agent]]s in the vicinity of this Bot.
+   * Gets the cell at an arbitrary location on the map.
+   * @param gridIdx the index
+   * @return
+   */
+  def cell(gridIdx: GridIndex): Future[Cell] = (simulation ? SimulationAgent.CellAtIdxRequest(gridIdx)).mapTo[Cell]
+
+  /**
+    * Gets all [[Bot]]s in the vicinity of this Bot.
     * @param distance the radius of the vicinity
     * @return all [[ActorRef]]s and their positions in the [[Simulation]]
     */
@@ -154,6 +161,7 @@ trait Bot extends Agent {
     */
   def changeVelocity(change: Int): Unit = velocity += change
 
-  private def custom: Receive = customReceive.result()
+
+
 }
 
