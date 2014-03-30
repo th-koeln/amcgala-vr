@@ -23,7 +23,7 @@ object VR extends Build {
 
   lazy val projectSettings = Defaults.defaultSettings ++ Seq(
     version := "0.1.0",
-    scalaVersion := "2.11.0-RC1",
+    scalaVersion := "2.11.0-RC3",
     organization := "org.amcgala",
     connectInput := true,
     name := "VR Framework",
