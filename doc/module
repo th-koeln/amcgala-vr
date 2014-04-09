@@ -53,9 +53,40 @@ Ein Bot besteht aus folgenden wesentlichen Modulen, die die Grundlage der implem
             Side Effect: Hunger wurde reduziert
 
     Implementierende Klasse: FindFriesBehavior
+    
+    
+    trait Brain {
+      def activeBehavior(): Option[Behavior]
+      def executeTask[T, R >: T#Return](t: Task[T]): Future[R]
+      def switchMode()
+      def update()
+      def registerJob(job)
+      def registerNeed(need)
+    }
+    
+    trait NeedManager {
+      def update()
+      def probabilities(): List[(Double, Need)]      
+    }
+    
+    trait Need {
+      val value: Int
+      var satisfactionStrategies: Set[Behavior] // nicht unbedingt notwendig
+      val needsManagement: NeedsManager
+      
+      def update(): Unit
+      def probability(): Double
+      def getSatisfactionStrategy(): Behavior
+      def increaseNeed(): Unit
+      def increaseNeed(amount: Int): Unit
+      def decreaseNeed(): Unit
+      def decreaseNeed(amount: Int): Unit
+      // escalate?
+    }
 
 
     trait Task[R] {
+        type Return = R
         val bot: Bot
         def execute(): Future[R]
     }
@@ -74,7 +105,7 @@ Ein Bot besteht aus folgenden wesentlichen Modulen, die die Grundlage der implem
         def start(): Future[Result] = {
               for{
                   coord <- bot.brain.executeTask(LocationService.find(Building.Restaurant))
-                  cell <- bot.brain.executeTask(MovementService.moveTo(coord))
+                  cell <- bot.brain.executeTask(MovementService.moveTo(bot, coord))
                   waiter <- bot.brain.executeTask(JobService.findJobRepresentative(bot, Job.Waiter))
                   fries <- bot.brain.executeTask(FoodService.orderFries(waiter, 10))
                   result <- bot.brain.executeTask(FoodService.eatFood(fries))
@@ -114,4 +145,28 @@ Ein Bot besteht aus folgenden wesentlichen Modulen, die die Grundlage der implem
         def orderFries(waiter: JobRepresentative[Waiter], amount: Int): OrderFriesTask = new OrderFriesTask(waiter, amount)
         def eatFood(food: Food): EatFoodTask = new EatFoodTask(food)
     }
+    
+
+    Bisherige Modulideen:
+      - Pathfinding und Infrastruktur
+        + MoveToBehavior(bot, coord)
+        + FindBuildings(bot)
+        + ConnectBuildings(bot, building1, building2)
+        + FindNearestRoad(bot)
+      - Buildings & Hunger
+        + RequestBuilding(bot, requester, buildingType)
+        + BuildBuilding(bot, buildingType, location)
+        + FindFood(bot)
+        + EatFood(bot)
+        + OrderFood
+      - Krankheit und Heilung
+        Wenn man keine Pheromone oder ähnliches implementieren möchte, dann lässt sich die Krankheit auch als ein Job eines Agenten ansehen.
+        Seine Aufgabe ist es, andere Agenten mit der Krankheit anzustecken.
+        + SpreadFlu
+        + SpreadSomethingVeryDeadly( -> needs Hospital) -.-
+        + FindDoctor
+        + AskForTreatment
+        + FindHospital
+        
+        
 
