@@ -18,8 +18,6 @@ trait Agent extends Actor {
   private var partials: Vector[Actor.Receive] = Vector()
   private var customReceive: Receive = Actor.emptyBehavior
 
-
-
   context.become(receive orElse tickHandling orElse customReceive)
   context.system.eventStream.subscribe(self, Tick.getClass)
 
@@ -49,7 +47,6 @@ trait Agent extends Actor {
       f()
     }
   }
-
 
   def registerCustomMessage(pf: Actor.Receive): Unit = {
     partials = partials :+ pf

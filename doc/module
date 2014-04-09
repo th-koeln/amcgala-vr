@@ -1,0 +1,117 @@
+Die Simulation stellt allgemeine Funktionen zur Interaktion mit der Welt zur Verfügung. Zusätzlich kümmert sie sich um
+das globale Zeit-Management. Sie besteht aus:
+
+- Der Weltrepräsentation (aka. the Map)
+    Hierbei handelt es sich um eine 2D Darstellung der Welt in Form eines Grids von Zellen. Diese Zellen halten alle
+    Informationen über diese Position. Zur Zeit ist das die Position der Zelle in der Welt und die Beschaffenheit der Zelle.
+    Die Beschaffenheit der Zelle definiert aktuell nur die Bewegungskosten für einen Schritt, die der Agent kalkulieren
+    muss, will der Agent diese Zelle überqueren.
+
+Ein Bot besteht aus folgenden wesentlichen Modulen, die die Grundlage der implementierten Funktionalitäten darstellen:
+
+- Task und Bedürfnismanagement (aka. the Brain)
+    Entscheidet was, wann gemacht werden soll. Ist die aktive Ausführungskomponente. Wenn ein anderes Modul eine Aktion
+    (Interaktion mit der Welt) durchführen möchte, so muss diese Aktion durch die Taskkomponente aktiviert werden.
+    Innerhalb des Brains werden zwei wichtige Modi unterschieden (dient der Vereinfachnung der Aufgabe):
+        - der Arbeitsmodus
+            In diesem Modus ist die Bedürfnisaktualisierung deaktiviert und der Agent folgt einem Plan, den man als
+            Beruf bezeichnen könnte. Das Deaktivieren der Bedürfnisse dient der Vereinfachung, da keine Bedürfnisbefriedigung
+            bei der Abarbeitung der Jobs intervenieren kann und das Scheduling erschwert.
+        - der Lebensmodus
+            Im Lebensmodus ist die Jobkomponente deaktiviert und der Bot befindet sich im "Freizeitmodus". In diesem Modus
+            wird das Jobverhalten nicht mehr ausgelöst, dafür aber die Bedürfnisse des Agenten aktualisiert.
+
+    Beide Modi implizieren, dass es eine Möglichkeit geben muss, Verhaltensmuster zu definieren und der Taskkomponente
+    zur Ausführung zu übergeben. In der aktuellen Vorstellung werden Verhaltungsmuster in Behavior-Klassen definiert. Ein
+    Behavior ist dabei eine Sammlung von einzelnen Aktionen, die sequentiell ausgeführt wird:
+        B = {Ti | i € N, T € Task}
+    Ein Task ist eine ausführbare Aktion (zB. das Bewegen zu einem bestimmten Punkt). Ein Task wird durch das Task-Management
+    gestartet. Sobald die Ausführung beendet ist, endet der Task, indem es ein Done an das Task-Management schickt und damit
+    signalisiert, dass die Aktion abgeschlossen wurde und eine neue gestartet werden kann.
+    Tasks, die von Modulen wiederverwendet werden sollen (zB. Pathfinding zu einem bestimmten Punkt auf der Karte) sollten
+    über öffentliche Factorymethoden zur Verfügung gestellt werden.
+
+    Beispiel: Gehe zur Pommesbude und iss Pommes
+
+    Mögliche Tasks:
+        1. Finde Pommesbude.
+            Input: Ziel (Ort, Typ)
+            Output: Koordinate
+        2. Gehe zu Ort
+            Input: Koordinate
+            Output: Cell
+            Side Effect: Agent hat neue Position
+        3. Finde Verkäufer
+            Input: Simulation
+            Output: Ref des Verkäufers
+        4. Bestelle essen
+            Input: Ref des Verkäufers
+            Output: Pommes
+        5. Iss Essen
+            Input: Pommes
+            Output: Done
+            Side Effect: Hunger wurde reduziert
+
+    Implementierende Klasse: FindFriesBehavior
+
+
+    trait Task[R] {
+        val bot: Bot
+        def execute(): Future[R]
+    }
+
+    trait Behavior {
+        val bot: Bot
+        def start(): Future[Result]
+    }
+
+    trait JobModule extends BotModule {
+        def findRepresentative[T](job: Job): Future[T >: JobRepresentative[Job]] // Geht das?
+    }
+
+
+    class FindFriesBehavior(bot: Bot with JobModule) extends Behavior {
+        def start(): Future[Result] = {
+              for{
+                  coord <- bot.brain.executeTask(LocationService.find(Building.Restaurant))
+                  cell <- bot.brain.executeTask(MovementService.moveTo(coord))
+                  waiter <- bot.brain.executeTask(JobService.findJobRepresentative(bot, Job.Waiter))
+                  fries <- bot.brain.executeTask(FoodService.orderFries(waiter, 10))
+                  result <- bot.brain.executeTask(FoodService.eatFood(fries))
+              } yield result
+        }
+    }
+
+    class FindJobRepresentativeTask(bot: Bot with JobModule, job: Job) extends Task[Waiter] {
+         def execute(): Future[Waiter] = {
+           bot.findRepresentative(job)
+         }
+    }
+
+    class WaiterRep(ref: ActorRef) extends JobRepresentative[Waiter] {
+        def orderFood(amount: Int): Future[Food] = (ref ? OrderFood(amount)).mapTo[Food]
+    }
+
+
+    object JobService {
+        def findJobRepresentative(bot: Bot with JobModule, job: Job): FindJobRepresentativeTask = {
+            new FindJobRepresentative(bot, job)
+        }
+    }
+
+    class OrderFriesTask(waiter: JobRepresentative[Waiter], amount: Int) extends Task[Food] {
+        def execute(): Future[Food] = waiter.orderFood(amount)
+    }
+
+    class EatFoodTask(bot: Bot, food: Food) extends Task[Result] {
+        def execute(): Future[Result] = {
+            bot.decreaseHunger(food.value)
+            Result.Success
+        }
+    }
+
+    object FoodService {
+        def orderFries(waiter: JobRepresentative[Waiter], amount: Int): OrderFriesTask = new OrderFriesTask(waiter, amount)
+        def eatFood(food: Food): EatFoodTask = new EatFoodTask(food)
+    }
+

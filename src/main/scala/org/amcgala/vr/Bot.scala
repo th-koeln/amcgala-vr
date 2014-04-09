@@ -5,7 +5,6 @@ import org.amcgala.vr.Headings.Heading
 import scala.concurrent.{ ExecutionContext, Future }
 import akka.pattern.ask
 import akka.util.Timeout
-import scala.util.Random
 
 object Bot {
 
@@ -42,7 +41,6 @@ trait Bot extends Agent {
   var heading: Heading = Headings.Up
   var velocity: Int = 1
   var simulation: ActorRef = ActorRef.noSender
-
 
   override def postStop(): Unit = {
     simulation ! SimulationAgent.Unregister
@@ -135,10 +133,10 @@ trait Bot extends Agent {
   def cell(): Future[Cell] = (simulation ? SimulationAgent.CellRequest(self)).mapTo[Cell]
 
   /**
-   * Gets the cell at an arbitrary location on the map.
-   * @param gridIdx the index
-   * @return
-   */
+    * Gets the cell at an arbitrary location on the map.
+    * @param gridIdx the index
+    * @return
+    */
   def cell(gridIdx: GridIndex): Future[Cell] = (simulation ? SimulationAgent.CellAtIdxRequest(gridIdx)).mapTo[Cell]
 
   /**
@@ -160,8 +158,6 @@ trait Bot extends Agent {
     * @param change the velocity change
     */
   def changeVelocity(change: Int): Unit = velocity += change
-
-
 
 }
 

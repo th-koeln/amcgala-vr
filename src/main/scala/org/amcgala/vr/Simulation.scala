@@ -96,15 +96,14 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
     rectangles(x)(y) = rect
   }
 
-
   framework.loadScene(scene)
 
   registerOnTickAction(() ⇒ {
 
-    for{
+    for {
       x ← 0 until width
       y ← 0 until height
-    }{
+    } {
       val cell = field(x)(y)
       rectangles(x)(y).setColor(cell.cellType.color)
     }
@@ -117,8 +116,6 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
     }
 
   })
-
-
 
   def receive: Receive = {
     case Register(bot, position) ⇒
@@ -133,12 +130,12 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
       }
 
     case CellTypeChange(gridIdx, cellType) ⇒
-      if (gridIdx.x >= 0 && gridIdx.x < width && gridIdx.y >= 0 && gridIdx.y < height){
+      if (gridIdx.x >= 0 && gridIdx.x < width && gridIdx.y >= 0 && gridIdx.y < height) {
         field(gridIdx.x)(gridIdx.y) = Cell(cellType)
       }
 
     case PositionChange(position) ⇒
-      if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height){
+      if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
         if (field(math.round(position.x).toInt)(math.round(position.y).toInt).cellType != CellTypes.Forbidden) {
           positions = positions + (sender() -> position)
           sender() ! Bot.PositionChange(position)
@@ -158,8 +155,8 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
       val position = positions(ref)
       sender() ! field(math.round(position.x).toInt)(math.round(position.y).toInt)
 
-    case CellAtIdxRequest(idx) =>
-      if(idx.x >= 0 && idx.x < field.length && idx.y >= 0 && idx.y < field(0).length){
+    case CellAtIdxRequest(idx) ⇒
+      if (idx.x >= 0 && idx.x < field.length && idx.y >= 0 && idx.y < field(0).length) {
         sender() ! field(idx.x)(idx.y)
       }
     case Unregister ⇒

@@ -18,6 +18,5 @@ object Main extends App {
   }
 }
 
-
 class SimpleNPC extends Bot
-with Health with Hunger with RandomWalk
+  with Health with Hunger with RandomWalk
