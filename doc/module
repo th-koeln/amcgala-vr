@@ -150,10 +150,10 @@ Ein Bot besteht aus folgenden wesentlichen Modulen, die die Grundlage der implem
     Bisherige Modulideen:
       - Pathfinding und Infrastruktur
         + MoveToBehavior(bot, coord)
-        + FindBuildings(bot)
+        + FindBuildings(bot, buildingType)
         + ConnectBuildings(bot, building1, building2)
         + FindNearestRoad(bot)
-      - Buildings & Hunger
+      - Buildings (& Hunger / Bedürfnisse)
         + RequestBuilding(bot, requester, buildingType)
         + BuildBuilding(bot, buildingType, location)
         + FindFood(bot)
