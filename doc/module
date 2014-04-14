@@ -1,3 +1,24 @@
+    Bisherige Modulideen:
+      - Pathfinding und Infrastruktur
+        + MoveToBehavior(bot, coord)
+        + FindBuildings(bot, buildingType)
+        + ConnectBuildings(bot, building1, building2)
+        + FindNearestRoad(bot)
+      - Buildings (& Hunger / Bedürfnisse)
+        + RequestBuilding(bot, requester, buildingType)
+        + BuildBuilding(bot, buildingType, location)
+        + FindFood(bot)
+        + EatFood(bot)
+        + OrderFood
+      - Krankheit und Heilung
+        Wenn man keine Pheromone oder ähnliches implementieren möchte, dann lässt sich die Krankheit auch als ein Job eines Agenten ansehen.
+        Seine Aufgabe ist es, andere Agenten mit der Krankheit anzustecken.
+        + SpreadFlu
+        + SpreadSomethingVeryDeadly( -> needs Hospital) -.-
+        + FindDoctor
+        + AskForTreatment
+        + FindHospital
+
 Die Simulation stellt allgemeine Funktionen zur Interaktion mit der Welt zur Verfügung. Zusätzlich kümmert sie sich um
 das globale Zeit-Management. Sie besteht aus:
 
@@ -147,26 +168,7 @@ Ein Bot besteht aus folgenden wesentlichen Modulen, die die Grundlage der implem
     }
     
 
-    Bisherige Modulideen:
-      - Pathfinding und Infrastruktur
-        + MoveToBehavior(bot, coord)
-        + FindBuildings(bot, buildingType)
-        + ConnectBuildings(bot, building1, building2)
-        + FindNearestRoad(bot)
-      - Buildings (& Hunger / Bedürfnisse)
-        + RequestBuilding(bot, requester, buildingType)
-        + BuildBuilding(bot, buildingType, location)
-        + FindFood(bot)
-        + EatFood(bot)
-        + OrderFood
-      - Krankheit und Heilung
-        Wenn man keine Pheromone oder ähnliches implementieren möchte, dann lässt sich die Krankheit auch als ein Job eines Agenten ansehen.
-        Seine Aufgabe ist es, andere Agenten mit der Krankheit anzustecken.
-        + SpreadFlu
-        + SpreadSomethingVeryDeadly( -> needs Hospital) -.-
-        + FindDoctor
-        + AskForTreatment
-        + FindHospital
+
         
         
 
