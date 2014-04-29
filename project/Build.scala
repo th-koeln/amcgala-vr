@@ -27,7 +27,7 @@ object VR extends Build {
     organization := "org.amcgala",
     connectInput := true,
     name := "VR Framework",
-    offline := true,
+    offline := false,
     scalacOptions := Seq(
       "-Xfuture",
       "-deprecation",

@@ -66,7 +66,7 @@ Ein Bot besteht aus folgenden wesentlichen Modulen, die die Grundlage der implem
     }
 
     trait JobModule extends BotModule {
-        def findRepresentative[T](job: Job): Future[T >: JobRepresentative[Job]] // Geht das?
+        def findRepresentative[T >: JobRepresentative[Job]](job: Job): Future[T]
     }
 
 
