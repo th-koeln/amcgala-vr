@@ -1,14 +1,9 @@
 package example
 
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.amcgala.vr._
-import org.amcgala.vr.task._
-import example.LocationService.Coordinate
 import org.amcgala.vr.Position
 import example.LocationService.Coordinate
-import akka.util.Timeout
-
 
 object BresenhamIterator {
 
@@ -45,62 +40,49 @@ object BresenhamIterator {
 
 }
 
-
-
 sealed trait BuildingType
 case object Restaurant extends BuildingType
 
-object LocationService{
+object LocationService {
   case class Coordinate(x: Int, y: Int)
   case class Cell(id: String)
 
-  class FindLocationTask(val buildingType: BuildingType)(implicit val bot: Bot) extends Task{
+  class FindLocationTask(val buildingType: BuildingType)(implicit val bot: Bot) extends Task {
     type Return = Coordinate
     import scala.concurrent._
 
-    def execute(): Future[Return] = future{Coordinate(150,150)}
+    def isDone() = true
+
+    def execute(): Future[Return] = future { Coordinate(150, 150) }
   }
 
-  class WalkToTask(coordinate: Coordinate)(implicit val bot: Bot) extends MultiStepTask{
+  class WalkToTask(coordinate: Coordinate)(implicit val bot: Bot) extends MultiStepTask {
     import scala.concurrent._
     type Return = LocationService.Cell
 
-    var p = BresenhamIterator.bresenham(0,0,0,0)
+    private var p = BresenhamIterator.bresenham(0, 0, 0, 0)
 
-
-    for(pos <- bot.position()){
+    for (pos ← bot.position()) {
       p = BresenhamIterator.bresenham(pos.x.toInt, pos.y.toInt, coordinate.x, coordinate.y)
     }
 
     override def onTick(): Unit = {
-      if(p.hasNext){
+      if (p.hasNext) {
         val n = p.next
         bot.moveToPosition(Position(n.x, n.y))
-        if(p.isEmpty) {
-          done()
-          result success LocationService.Cell("Yay")
-        }
+      }else{
+        bot.moveToPosition(Position(coordinate.x, coordinate.y))
+        done()
+        println("done, sending cell")
+        result success LocationService.Cell("Yay")
       }
     }
 
     override def execute(): Future[Return] = result.future
-
-
   }
-
 
   def findLocation(buildingType: BuildingType)(implicit bot: Bot) = new FindLocationTask(buildingType)
   def walkTo(pos: Coordinate)(implicit bot: Bot) = new WalkToTask(pos)
 }
 
-class FindFriesBehavior()(implicit val bot: Bot) extends Behavior{
-  type Return = LocationService.Cell
 
-
-  def start() = {
-    for{
-      pos <- bot.executeTask(LocationService.findLocation(Restaurant)(bot))
-      mcd <- bot.executeTask(LocationService.walkTo(pos)(bot))
-    } yield mcd
-  }
-}

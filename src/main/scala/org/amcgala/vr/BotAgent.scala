@@ -1,6 +1,6 @@
 package org.amcgala.vr
 
-import akka.actor.{Stash, PoisonPill, ActorRef}
+import akka.actor.{ Stash, PoisonPill, ActorRef }
 import org.amcgala.vr.Headings.Heading
 import scala.concurrent.{ ExecutionContext, Future }
 import akka.pattern.ask
@@ -48,15 +48,14 @@ object BotAgent {
 /**
   * A Bot is an [[Agent]] with a physical position.
   */
-trait BotAgent extends Agent with BrainModule with Stash{
+trait BotAgent extends Agent with BrainModule with Stash {
 
   import concurrent.duration._
   import BotAgent._
 
-  implicit val timeout = Timeout(10.second)
+  implicit val timeout = Timeout(120.second)
   implicit val ec = ExecutionContext.global
   implicit val me = Bot(self)
-
 
   var localPosition: Position = Position(0, 0)
   var heading: Heading = Headings.Up
@@ -74,38 +73,39 @@ trait BotAgent extends Agent with BrainModule with Stash{
       localPosition = pos
       context.become(positionHandling orElse tickHandling orElse taskHandling orElse needHandling)
       unstashAll()
-    case _ => stash()
+    case _ ⇒ stash()
   }
 
   protected def taskHandling: Receive = {
-    case ExecuteBehavior(b) =>
+    case ExecuteBehavior(b) ⇒
       val requester = sender()
-      for(r <-  brain.executeBehavior(b)){
+      for (r ← brain.executeBehavior(b)) {
         requester ! r
       }
-    case ExecuteTask(t) =>
+    case ExecuteTask(t) ⇒
       val requester = sender()
-      for(r <-  brain.executeTask(t)){
+      for (r ← brain.executeTask(t)) {
         requester ! r
       }
-    case TimeRequest => sender() ! currentTime
+    case TimeRequest ⇒
+      sender() ! currentTime
   }
 
   protected def needHandling: Receive = {
-    case RegisterNeed(need) => brain.registerNeed(need)
+    case RegisterNeed(need) ⇒ brain.registerNeed(need)
   }
 
   protected def positionHandling: Receive = {
     case PositionChange(pos) ⇒
       localPosition = pos
-    case HeadingRequest ⇒ sender() ! heading
-    case TurnLeft => turnLeft()
-    case TurnRight => turnRight()
-    case MoveBackward => moveBackward()
-    case MoveForward => moveForward()
-    case MoveToPosition(pos) => moveToPosition(pos)
-    case ChangeVelocity(vel) => velocity = vel
-    case CurrentPositionRequest => sender() ! localPosition
+    case HeadingRequest         ⇒ sender() ! heading
+    case TurnLeft               ⇒ turnLeft()
+    case TurnRight              ⇒ turnRight()
+    case MoveBackward           ⇒ moveBackward()
+    case MoveForward            ⇒ moveForward()
+    case MoveToPosition(pos)    ⇒ moveToPosition(pos)
+    case ChangeVelocity(vel)    ⇒ velocity = vel
+    case CurrentPositionRequest ⇒ sender() ! localPosition
   }
 
   /**
@@ -212,8 +212,7 @@ trait BotAgent extends Agent with BrainModule with Stash{
   def worldSize: (Int, Int) = (200, 200)
 }
 
-
-case class Bot(ref: ActorRef){
+case class Bot(ref: ActorRef) {
   import BotAgent._
   import Agent._
 
@@ -221,8 +220,7 @@ case class Bot(ref: ActorRef){
   import scala.concurrent.duration._
   import akka.pattern.ask
 
-  private implicit val timeout = Timeout(10.seconds)
-
+  private implicit val timeout = Timeout(120.seconds)
 
   def turnLeft() = ref ! TurnLeft
   def turnRight() = ref ! TurnRight
@@ -232,7 +230,7 @@ case class Bot(ref: ActorRef){
   def position() = (ref ? CurrentPositionRequest).mapTo[Position]
   def changeVelocity(vel: Double) = ref ! ChangeVelocity(vel)
 
-  def registerOnTickAction(handle: String, action: () => Unit) = ref ! RegisterOnTickAction(handle, action)
+  def registerOnTickAction(handle: String, action: () ⇒ Unit) = ref ! RegisterOnTickAction(handle, action)
   def removeOnTickAction(handle: String) = ref ! RemoveOnTickAction(handle)
 
   def executeTask(task: Task)(implicit tag: ClassTag[task.Return]): Future[task.Return] = (ref ? ExecuteTask(task)).mapTo[task.Return]
