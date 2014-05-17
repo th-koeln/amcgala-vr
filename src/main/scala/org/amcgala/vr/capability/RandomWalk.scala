@@ -1,15 +1,15 @@
 package org.amcgala.vr.capability
 
 import scala.util.Random
-import org.amcgala.vr.Bot
+import org.amcgala.vr.BotAgent
 
 /**
-  * Lets the [[Bot]] walk randomly.
+  * Lets the [[BotAgent]] walk randomly.
   */
 trait RandomWalk extends BotCapability {
-  bot: Bot ⇒
+  bot: BotAgent ⇒
 
-  registerOnTickAction(() ⇒ {
+  registerOnTickAction("randomWalkHandling", () ⇒ {
     val turns = Random.nextInt(3)
     val left = Random.nextBoolean()
 

@@ -1,12 +1,14 @@
 package org.amcgala.vr
 
-import akka.actor.{ PoisonPill, ActorRef }
+import akka.actor.{Stash, PoisonPill, ActorRef}
 import org.amcgala.vr.Headings.Heading
 import scala.concurrent.{ ExecutionContext, Future }
 import akka.pattern.ask
 import akka.util.Timeout
+import org.amcgala.vr.BotAgent.TurnLeft
+import scala.reflect.ClassTag
 
-object Bot {
+object BotAgent {
 
   /**
     * New [[Position]] of this Bot.
@@ -20,26 +22,45 @@ object Bot {
   case object Introduction
 
   /**
-    * The [[Bot]] replies with its current [[Heading]].
+    * The [[BotAgent]] replies with its current [[Heading]].
     */
   case object HeadingRequest
 
+  case object TurnLeft
+  case object TurnRight
+  case object MoveForward
+  case object MoveBackward
+
+  case class MoveToPosition(position: Position)
+
+  case class ChangeVelocity(vel: Double)
+
+  case object CurrentPositionRequest
+
+  case class ExecuteTask(task: Task)
+  case class ExecuteBehavior(behavior: Behavior)
+
+  case class RegisterNeed(need: Need)
+
+  case object TimeRequest
 }
 
 /**
   * A Bot is an [[Agent]] with a physical position.
   */
-trait Bot extends Agent {
+trait BotAgent extends Agent with BrainModule with Stash{
 
   import concurrent.duration._
-  import Bot._
+  import BotAgent._
 
-  implicit val timeout = Timeout(1.second)
+  implicit val timeout = Timeout(10.second)
   implicit val ec = ExecutionContext.global
+  implicit val me = Bot(self)
+
 
   var localPosition: Position = Position(0, 0)
   var heading: Heading = Headings.Up
-  var velocity: Int = 1
+  var velocity: Double = 1
   var simulation: ActorRef = ActorRef.noSender
 
   override def postStop(): Unit = {
@@ -51,13 +72,40 @@ trait Bot extends Agent {
       simulation = sender()
     case PositionChange(pos) ⇒
       localPosition = pos
-      context.become(positionHandling orElse tickHandling)
+      context.become(positionHandling orElse tickHandling orElse taskHandling orElse needHandling)
+      unstashAll()
+    case _ => stash()
+  }
+
+  protected def taskHandling: Receive = {
+    case ExecuteBehavior(b) =>
+      val requester = sender()
+      for(r <-  brain.executeBehavior(b)){
+        requester ! r
+      }
+    case ExecuteTask(t) =>
+      val requester = sender()
+      for(r <-  brain.executeTask(t)){
+        requester ! r
+      }
+    case TimeRequest => sender() ! currentTime
+  }
+
+  protected def needHandling: Receive = {
+    case RegisterNeed(need) => brain.registerNeed(need)
   }
 
   protected def positionHandling: Receive = {
     case PositionChange(pos) ⇒
       localPosition = pos
     case HeadingRequest ⇒ sender() ! heading
+    case TurnLeft => turnLeft()
+    case TurnRight => turnRight()
+    case MoveBackward => moveBackward()
+    case MoveForward => moveForward()
+    case MoveToPosition(pos) => moveToPosition(pos)
+    case ChangeVelocity(vel) => velocity = vel
+    case CurrentPositionRequest => sender() ! localPosition
   }
 
   /**
@@ -120,6 +168,8 @@ trait Bot extends Agent {
     }
   }
 
+  def moveToPosition(pos: Position) = simulation ! SimulationAgent.PositionChange(pos)
+
   /**
     * Gets the current [[Position]] of this Bot from the [[Simulation]].
     * @return the current position
@@ -140,7 +190,7 @@ trait Bot extends Agent {
   def cell(gridIdx: GridIndex): Future[Cell] = (simulation ? SimulationAgent.CellAtIdxRequest(gridIdx)).mapTo[Cell]
 
   /**
-    * Gets all [[Bot]]s in the vicinity of this Bot.
+    * Gets all [[BotAgent]]s in the vicinity of this Bot.
     * @param distance the radius of the vicinity
     * @return all [[ActorRef]]s and their positions in the [[Simulation]]
     */
@@ -151,7 +201,7 @@ trait Bot extends Agent {
     * @param ref the [[ActorRef]] of the Bot
     * @return the current [[Heading]]
     */
-  def requestHeading(ref: ActorRef): Future[Heading] = (ref ? Bot.HeadingRequest).mapTo[Heading]
+  def requestHeading(ref: ActorRef): Future[Heading] = (ref ? BotAgent.HeadingRequest).mapTo[Heading]
 
   /**
     * Changes the velocity of the Bot.
@@ -159,5 +209,36 @@ trait Bot extends Agent {
     */
   def changeVelocity(change: Int): Unit = velocity += change
 
+  def worldSize: (Int, Int) = (200, 200)
 }
 
+
+case class Bot(ref: ActorRef){
+  import BotAgent._
+  import Agent._
+
+  import scala.concurrent.ExecutionContext.Implicits.global
+  import scala.concurrent.duration._
+  import akka.pattern.ask
+
+  private implicit val timeout = Timeout(10.seconds)
+
+
+  def turnLeft() = ref ! TurnLeft
+  def turnRight() = ref ! TurnRight
+  def moveForward() = ref ! MoveForward
+  def moveBackward() = ref ! MoveBackward
+  def moveToPosition(pos: Position) = ref ! MoveToPosition(pos)
+  def position() = (ref ? CurrentPositionRequest).mapTo[Position]
+  def changeVelocity(vel: Double) = ref ! ChangeVelocity(vel)
+
+  def registerOnTickAction(handle: String, action: () => Unit) = ref ! RegisterOnTickAction(handle, action)
+  def removeOnTickAction(handle: String) = ref ! RemoveOnTickAction(handle)
+
+  def executeTask(task: Task)(implicit tag: ClassTag[task.Return]): Future[task.Return] = (ref ? ExecuteTask(task)).mapTo[task.Return]
+  def executeBehavior(behavior: Behavior)(implicit tag: ClassTag[behavior.Return]): Future[behavior.Return] = {
+    (ref ? ExecuteBehavior(behavior)).mapTo[behavior.Return]
+  }
+
+  def currentTime = (ref ? TimeRequest).mapTo[Time]
+}

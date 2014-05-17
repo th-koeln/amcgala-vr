@@ -1,17 +1,17 @@
 package org.amcgala.vr.capability
 
-import org.amcgala.vr.Bot
+import org.amcgala.vr.BotAgent
 
 /**
-  * A simple Hunger definition for a [[Bot]]. It depends on the [[Health]] [[BotCapability]].
+  * A simple Hunger definition for a [[BotAgent]]. It depends on the [[Health]] [[BotCapability]].
   */
 trait Hunger extends BotCapability {
-  bot: Bot with Health ⇒
+  bot: BotAgent with Health ⇒
 
   var hunger: Int = 0
   var counter: Int = 0
 
-  registerOnTickAction(() ⇒ {
+  registerOnTickAction("hungerhandling", () ⇒ {
     counter = (counter + 1) % 5
 
     if (counter == 0) {

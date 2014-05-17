@@ -9,11 +9,11 @@ package object vr {
   implicit val system = ActorSystem("vr-system")
 
   /**
-    * Possible headings of a [[Bot]].
+    * Possible headings of a [[BotAgent]].
     */
   object Headings {
     /**
-      * The Heading of a [[Bot]].
+      * The Heading of a [[BotAgent]].
       */
     sealed trait Heading {
       val x: Double

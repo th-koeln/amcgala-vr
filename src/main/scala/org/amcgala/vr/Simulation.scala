@@ -24,14 +24,14 @@ case class Cell(cellType: CellTypes.CellType)
 object SimulationAgent {
 
   /**
-    * Registers a new [[Bot]] with the [[SimulationAgent]].
-    * @param bot the [[ActorRef]] of the [[Bot]]
+    * Registers a new [[BotAgent]] with the [[SimulationAgent]].
+    * @param bot the [[ActorRef]] of the [[BotAgent]]
     * @param position the [[Position]] in the simulated world
     */
   case class Register(bot: ActorRef, position: Position)
 
   /**
-    * Removes a [[Bot]] from the [[SimulationAgent]]
+    * Removes a [[BotAgent]] from the [[SimulationAgent]]
     */
   case object Unregister
 
@@ -43,7 +43,7 @@ object SimulationAgent {
   case class CellTypeChange(gridIdx: GridIndex, cellType: CellTypes.CellType)
 
   /**
-    * Changes the [[Position]] of a [[Bot]].
+    * Changes the [[Position]] of a [[BotAgent]].
     * @param position the new position
     */
   case class PositionChange(position: Position)
@@ -98,7 +98,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
   framework.loadScene(scene)
 
-  registerOnTickAction(() ⇒ {
+  registerOnTickAction("drawing", () ⇒ {
 
     for {
       x ← 0 until width
@@ -121,8 +121,8 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
     case Register(bot, position) ⇒
       if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
         if (field(math.round(position.x).toInt)(math.round(position.y).toInt).cellType != CellTypes.Forbidden) {
-          bot ! Bot.Introduction
-          bot ! Bot.PositionChange(position)
+          bot ! BotAgent.Introduction
+          bot ! BotAgent.PositionChange(position)
           positions = positions + (bot -> position)
         }
       } else {
@@ -138,7 +138,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
       if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
         if (field(math.round(position.x).toInt)(math.round(position.y).toInt).cellType != CellTypes.Forbidden) {
           positions = positions + (sender() -> position)
-          sender() ! Bot.PositionChange(position)
+          sender() ! BotAgent.PositionChange(position)
         }
       }
 
@@ -174,22 +174,22 @@ class Simulation(val width: Int, val height: Int)(implicit system: ActorSystem) 
   private val sim = system.actorOf(SimulationAgent.props(width, height))
 
   /**
-    * Creates a new instance of a [[Bot]].
-    * @param cls the class of the bot, must be a subclass of [[Bot]]
+    * Creates a new instance of a [[BotAgent]].
+    * @param cls the class of the bot, must be a subclass of [[BotAgent]]
     * @param position the starting position of the bot
     * @tparam T the class type of this bot
     * @return [[ActorRef]]
     */
-  def spawnBot[T <: Bot](cls: Class[T], position: Position): ActorRef = {
+  def spawnBot[T <: BotAgent](cls: Class[T], position: Position): Bot = {
     val bot = system.actorOf(Props(cls))
     sim ! Register(bot, position)
-    bot
+    Bot(bot)
   }
 
-  def spawnBot[T <: Bot](cls: Class[T]): ActorRef = {
+  def spawnBot[T <: BotAgent](cls: Class[T]): Bot = {
     val bot = system.actorOf(Props(cls))
     sim ! Register(bot, randomPosition())
-    bot
+    Bot(bot)
   }
 
   def changeCellType(gridIdx: GridIndex, cellType: CellTypes.CellType) = {

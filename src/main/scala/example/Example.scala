@@ -2,27 +2,47 @@ package example
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import org.amcgala.vr._
+import org.amcgala.vr.task._
+import example.LocationService.Coordinate
+import org.amcgala.vr.Position
+import example.LocationService.Coordinate
+import akka.util.Timeout
 
-trait Task{
-  type Return
-  def execute(): Future[Return]
-}
 
-class Bot
+object BresenhamIterator {
 
-class Brain{
-  def executeTask(task: Task): Future[task.Return] = task.execute()
-  def executeBehavior(behavior: Behavior) = behavior.start()
-}
+  def bresenham(x0: Int, y0: Int, x1: Int, y1: Int) = {
+    import scala.math.abs
 
-trait BrainModule{self: Bot =>
-  val brain = new Brain
-}
+    val dx = abs(x1 - x0)
+    val dy = abs(y1 - y0)
 
-trait Behavior{
-  type Return
-  val bot: Bot with BrainModule
-  def start(): Future[Return]
+    val sx = if (x0 < x1) 1 else -1
+    val sy = if (y0 < y1) 1 else -1
+
+    new Iterator[Coordinate] {
+      var (x, y) = (x0, y0)
+      var err = dx - dy
+
+      def next = {
+        val point = Coordinate(x, y)
+        val e2 = 2 * err
+        if (e2 > -dy) {
+          err -= dy
+          x += sx
+        }
+        if (e2 < dx) {
+          err += dx
+          y += sy
+        }
+        point
+      }
+
+      def hasNext = !(x == x1 && y == y1)
+    }
+  }
+
 }
 
 
@@ -34,44 +54,53 @@ object LocationService{
   case class Coordinate(x: Int, y: Int)
   case class Cell(id: String)
 
-  class FindLocationTask(val buildingType: BuildingType) extends Task{
+  class FindLocationTask(val buildingType: BuildingType)(implicit val bot: Bot) extends Task{
     type Return = Coordinate
+    import scala.concurrent._
 
-    def execute(): Future[Return] = Future.successful(Coordinate(0,0))
+    def execute(): Future[Return] = future{Coordinate(150,150)}
   }
 
-  class GotoTask(coordinate: Coordinate) extends Task{
+  class WalkToTask(coordinate: Coordinate)(implicit val bot: Bot) extends MultiStepTask{
+    import scala.concurrent._
     type Return = LocationService.Cell
 
-    def execute(): Future[Return] = Future.successful(Cell("McD"))
+    var p = BresenhamIterator.bresenham(0,0,0,0)
+
+
+    for(pos <- bot.position()){
+      p = BresenhamIterator.bresenham(pos.x.toInt, pos.y.toInt, coordinate.x, coordinate.y)
+    }
+
+    override def onTick(): Unit = {
+      if(p.hasNext){
+        val n = p.next
+        bot.moveToPosition(Position(n.x, n.y))
+        if(p.isEmpty) {
+          done()
+          result success LocationService.Cell("Yay")
+        }
+      }
+    }
+
+    override def execute(): Future[Return] = result.future
+
+
   }
 
 
-  def findLocation(buildingType: BuildingType) = new FindLocationTask(buildingType)
-  def walkTo(pos: Coordinate) = new GotoTask(pos)
+  def findLocation(buildingType: BuildingType)(implicit bot: Bot) = new FindLocationTask(buildingType)
+  def walkTo(pos: Coordinate)(implicit bot: Bot) = new WalkToTask(pos)
 }
 
-class FindFriesBehavior(val bot: Bot with BrainModule) extends Behavior{
+class FindFriesBehavior()(implicit val bot: Bot) extends Behavior{
   type Return = LocationService.Cell
 
+
   def start() = {
-    println("starting")
     for{
-      pos <- bot.brain.executeTask(LocationService.findLocation(Restaurant))
-      mcd <- bot.brain.executeTask(LocationService.walkTo(pos))
+      pos <- bot.executeTask(LocationService.findLocation(Restaurant)(bot))
+      mcd <- bot.executeTask(LocationService.walkTo(pos)(bot))
     } yield mcd
   }
-}
-
-object Test extends App{
-
-  val b = new Bot with BrainModule
-
-  println("running task")
-  val c = new FindFriesBehavior(b).start()
-
-  for(cc <- c) println(cc.id)
-
-  Thread.sleep(2000)
-
 }
