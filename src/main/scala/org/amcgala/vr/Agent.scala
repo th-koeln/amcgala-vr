@@ -28,6 +28,7 @@ trait Agent extends Actor {
   context.become(receive orElse tickHandling orElse customReceive)
   context.system.eventStream.subscribe(self, classOf[Tick])
 
+
   /**
     * Adds the function to the actions that are performed every tick.
     * @param f that function to be added

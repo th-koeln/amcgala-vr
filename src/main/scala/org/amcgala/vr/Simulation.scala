@@ -2,24 +2,24 @@ package org.amcgala.vr
 
 import akka.actor.{ PoisonPill, ActorRef, ActorSystem, Props }
 import scala.util.Random
-import org.amcgala.{ RGBColor, Scene, FrameworkMode, Framework }
+import org.amcgala._
 import org.amcgala.shape.Rectangle
 import org.amcgala.math.Vertex3f
+import org.amcgala.vr.building.Building
 
 /**
   * The absolute position of an entity in the [[Simulation]].
   * @param x
   * @param y
   */
-case class Position(x: Double, y: Double)
+case class Position(x: Int, y: Int)
 
-case class GridIndex(x: Int, y: Int)
 
 /**
   * A Cell in the simulated world map.
-  * @param cellType the [[CellTypes.CellType]] of the Cell.
-  */
-case class Cell(cellType: CellTypes.CellType)
+ * @param cellType the [[CellType]] of the Cell.
+ */
+case class Cell(cellType: CellType)
 
 object SimulationAgent {
 
@@ -28,7 +28,9 @@ object SimulationAgent {
     * @param bot the [[ActorRef]] of the [[BotAgent]]
     * @param position the [[Position]] in the simulated world
     */
-  case class Register(bot: ActorRef, position: Position)
+  case class RegisterAgent(bot: ActorRef, position: Position)
+
+  case class RegisterBuilding(bot: ActorRef, position: Position)
 
   /**
     * Removes a [[BotAgent]] from the [[SimulationAgent]]
@@ -36,11 +38,11 @@ object SimulationAgent {
   case object Unregister
 
   /**
-    * Changes the [[CellTypes.CellType]] of a Cell.
-    * @param gridIdx the [[Position]] of the [[Cell]] in the world
-    * @param cellType the new [[CellTypes.CellType]]
-    */
-  case class CellTypeChange(gridIdx: GridIndex, cellType: CellTypes.CellType)
+   * Changes the [[CellType]] of a Cell.
+   * @param index the [[Position]] of the [[Cell]] in the world
+   * @param cellType the new [[CellType]]
+   */
+  case class CellTypeChange(index: Position, cellType: CellType)
 
   /**
     * Changes the [[Position]] of a [[BotAgent]].
@@ -60,7 +62,7 @@ object SimulationAgent {
     */
   case class CellRequest(ref: ActorRef)
 
-  case class CellAtIdxRequest(gridIdx: GridIndex)
+  case class CellAtIndexRequest(index: Position)
 
   /**
     * The SimulationAgent answers this message with a List of ([[ActorRef]], [[Position]]) Tuples of all Bots that are
@@ -77,9 +79,11 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
   import SimulationAgent._
 
-  val field = Array.fill(width, height)(Cell(CellTypes.Floor))
+  val field = Array.fill(width, height)(Cell(CellType.Floor))
 
-  var positions = Map[ActorRef, Position]()
+  var agentPositions = Map[ActorRef, Position]()
+  var buildingPositions = Map[ActorRef, Position]()
+  
   val framework = Framework.getInstance(FrameworkMode.SOFTWARE)
   val scene = new Scene("vis")
   val scaleX = framework.getWidth / width
@@ -108,25 +112,43 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
       rectangles(x)(y).setColor(cell.cellType.color)
     }
 
-    val posIt = positions.iterator
+    val posIt = agentPositions.iterator
 
     while (posIt.hasNext) {
       val next = posIt.next()
-      rectangles(math.round(next._2.x).toInt)(math.round(next._2.y).toInt).setColor(RGBColor.GREEN)
+      rectangles(next._2.x)(next._2.y).setColor(RGBColor.GREEN)
+    }
+
+    val buildingsIt = buildingPositions.iterator
+
+    while (buildingsIt.hasNext) {
+      val next = buildingsIt.next()
+      rectangles(next._2.x)(next._2.y).setColor(RGBColor.BLUE)
     }
 
   })
 
   def receive: Receive = {
-    case Register(bot, position) ⇒
+    case RegisterAgent(bot, position) ⇒
       if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
-        if (field(math.round(position.x).toInt)(math.round(position.y).toInt).cellType != CellTypes.Forbidden) {
+        if (field(position.x)(position.y).cellType != CellType.Forbidden) {
           bot ! BotAgent.Introduction
           bot ! BotAgent.PositionChange(position)
-          positions = positions + (bot -> position)
+          agentPositions = agentPositions + (bot -> position)
         }
       } else {
         bot ! PoisonPill
+      }
+
+    case RegisterBuilding(ref, position) =>
+      if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
+        if (field(position.x)(position.y).cellType != CellType.Forbidden) {
+          ref ! BotAgent.Introduction
+          ref ! BotAgent.PositionChange(position)
+          buildingPositions = buildingPositions + (ref -> position)
+        }
+      } else {
+        ref ! PoisonPill
       }
 
     case CellTypeChange(gridIdx, cellType) ⇒
@@ -136,31 +158,31 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
     case PositionChange(position) ⇒
       if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
-        if (field(math.round(position.x).toInt)(math.round(position.y).toInt).cellType != CellTypes.Forbidden) {
-          positions = positions + (sender() -> position)
+        if (field(position.x)(position.y).cellType != CellType.Forbidden) {
+          agentPositions = agentPositions + (sender() -> position)
           sender() ! BotAgent.PositionChange(position)
         }
       }
 
     case PositionRequest(ref) ⇒
-      for (pos ← positions.get(ref)) {
+      for (pos ← agentPositions.get(ref)) {
         sender() ! pos
       }
 
     case VicinityRequest(ref, dis) ⇒
-      val pos = positions(ref)
-      sender() ! positions.filter(t ⇒ Utils.distance(pos, t._2) < dis && t._1 != ref)
+      val pos = agentPositions(ref)
+      sender() ! agentPositions.filter(t ⇒ Utils.distance(pos, t._2) < dis && t._1 != ref)
 
     case CellRequest(ref) ⇒
-      val position = positions(ref)
-      sender() ! field(math.round(position.x).toInt)(math.round(position.y).toInt)
+      val position = agentPositions(ref)
+      sender() ! field(position.x)(position.y)
 
-    case CellAtIdxRequest(idx) ⇒
+    case CellAtIndexRequest(idx) ⇒
       if (idx.x >= 0 && idx.x < field.length && idx.y >= 0 && idx.y < field(0).length) {
         sender() ! field(idx.x)(idx.y)
       }
     case Unregister ⇒
-      positions = positions - sender()
+      agentPositions = agentPositions - sender()
 
   }
 
@@ -182,20 +204,26 @@ class Simulation(val width: Int, val height: Int)(implicit system: ActorSystem) 
     */
   def spawnBot[T <: BotAgent](cls: Class[T], position: Position): Bot = {
     val bot = system.actorOf(Props(cls))
-    sim ! Register(bot, position)
+    sim ! RegisterAgent(bot, position)
     Bot(bot)
   }
 
   def spawnBot[T <: BotAgent](cls: Class[T]): Bot = {
     val bot = system.actorOf(Props(cls))
-    sim ! Register(bot, randomPosition())
+    sim ! RegisterAgent(bot, randomPosition())
     Bot(bot)
   }
 
-  def changeCellType(gridIdx: GridIndex, cellType: CellTypes.CellType) = {
-    sim ! CellTypeChange(gridIdx, cellType)
+  def spawnBuilding[T <: Building](cls: Class[T], position: Position): ActorRef = {
+    val building = system.actorOf(Props(cls))
+    sim ! RegisterBuilding(building, position)
+    building
   }
 
-  def randomPosition(): Position = Position(Random.nextDouble() * width, Random.nextDouble() * height)
+  def changeCellType(index: Position, cellType: CellType) = {
+    sim ! CellTypeChange(index, cellType)
+  }
+
+  def randomPosition(): Position = Position(Random.nextInt(width), Random.nextInt(height))
 }
 

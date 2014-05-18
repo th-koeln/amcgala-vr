@@ -4,6 +4,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import org.amcgala.vr._
 import org.amcgala.vr.Position
 import example.LocationService.Coordinate
+import org.amcgala.vr.building.BuildingType
 
 object BresenhamIterator {
 
@@ -40,8 +41,6 @@ object BresenhamIterator {
 
 }
 
-sealed trait BuildingType
-case object Restaurant extends BuildingType
 
 object LocationService {
   case class Coordinate(x: Int, y: Int)
@@ -73,7 +72,6 @@ object LocationService {
       }else{
         bot.moveToPosition(Position(coordinate.x, coordinate.y))
         done()
-        println("done, sending cell")
         result success LocationService.Cell("Yay")
       }
     }

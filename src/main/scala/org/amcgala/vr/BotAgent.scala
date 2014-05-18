@@ -33,7 +33,7 @@ object BotAgent {
 
   case class MoveToPosition(position: Position)
 
-  case class ChangeVelocity(vel: Double)
+  case class ChangeVelocity(vel: Int)
 
   case object CurrentPositionRequest
 
@@ -48,7 +48,7 @@ object BotAgent {
 /**
   * A Bot is an [[Agent]] with a physical position.
   */
-trait BotAgent extends Agent with BrainModule with Stash {
+trait BotAgent extends Agent with Stash {
 
   import concurrent.duration._
   import BotAgent._
@@ -58,9 +58,28 @@ trait BotAgent extends Agent with BrainModule with Stash {
   implicit val me = Bot(self)
 
   var localPosition: Position = Position(0, 0)
+  var currentPosition: Position = Position(0, 0)
+  var knownCells = Map[Position, Cell]()
+
   var heading: Heading = Headings.Up
-  var velocity: Double = 1
+  var velocity: Int = 1
   var simulation: ActorRef = ActorRef.noSender
+
+  val brain = new Brain(Bot(self))
+
+
+  registerOnTickAction("update brain", () ⇒ {
+    brain.update()
+  })
+
+  registerOnTickAction("localMap", () ⇒ {
+    if (currentPosition != localPosition) {
+      currentPosition = localPosition
+      for (cell ← cell()) {
+        knownCells = knownCells + (currentPosition -> cell)
+      }
+    }
+  })
 
   override def postStop(): Unit = {
     simulation ! SimulationAgent.Unregister
@@ -184,10 +203,10 @@ trait BotAgent extends Agent with BrainModule with Stash {
 
   /**
     * Gets the cell at an arbitrary location on the map.
-    * @param gridIdx the index
-    * @return
+   * @param index the index
+   * @return
     */
-  def cell(gridIdx: GridIndex): Future[Cell] = (simulation ? SimulationAgent.CellAtIdxRequest(gridIdx)).mapTo[Cell]
+  def cell(index: Position): Future[Cell] = (simulation ? SimulationAgent.CellAtIndexRequest(index)).mapTo[Cell]
 
   /**
     * Gets all [[BotAgent]]s in the vicinity of this Bot.
@@ -210,6 +229,10 @@ trait BotAgent extends Agent with BrainModule with Stash {
   def changeVelocity(change: Int): Unit = velocity += change
 
   def worldSize: (Int, Int) = (200, 200)
+
+  def registerNeed(need: Need) = brain.registerNeed(need)
+
+  def registerJob(job: Behavior) = brain.registerJob(job)
 }
 
 case class Bot(ref: ActorRef) {
@@ -228,7 +251,8 @@ case class Bot(ref: ActorRef) {
   def moveBackward() = ref ! MoveBackward
   def moveToPosition(pos: Position) = ref ! MoveToPosition(pos)
   def position() = (ref ? CurrentPositionRequest).mapTo[Position]
-  def changeVelocity(vel: Double) = ref ! ChangeVelocity(vel)
+
+  def changeVelocity(vel: Int) = ref ! ChangeVelocity(vel)
 
   def registerOnTickAction(handle: String, action: () ⇒ Unit) = ref ! RegisterOnTickAction(handle, action)
   def removeOnTickAction(handle: String) = ref ! RemoveOnTickAction(handle)

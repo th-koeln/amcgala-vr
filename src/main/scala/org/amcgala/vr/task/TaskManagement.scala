@@ -1,40 +1,42 @@
 package org.amcgala.vr
 
-import scala.concurrent.{ Promise, Future }
+import scala.concurrent.{Promise, Future}
 import org.amcgala.vr.BrainModes.BrainMode
 
 object BrainModes {
+
   sealed trait BrainMode
+
   case object NeedMode extends BrainMode
+
   case object JobMode extends BrainMode
+
   case object IdleMode extends BrainMode
+
 }
 
-trait BrainModule { s: BotAgent ⇒
-  val brain = new Brain(Bot(s.self))
-  def registerNeed(need: Need) = brain.registerNeed(need)
-  def registerJob(job: Behavior) = brain.registerJob(job)
-
-  registerOnTickAction("update brain", () ⇒ {
-    brain.update()
-  })
-}
 
 trait Behavior {
   type Return
   val bot: Bot
-  def isDone(): Boolean
+  protected var done = false
+
+  def isDone(): Boolean = done
+
   def start(): Future[Return]
 }
 
 trait Task {
   val bot: Bot
   type Return
+
   def isDone(): Boolean
+
   def execute(): Future[Return]
 }
 
 trait MultiStepTask extends Task {
+
   import scala.concurrent._
 
   var result: Promise[Return] = promise[Return]
@@ -54,6 +56,7 @@ trait MultiStepTask extends Task {
 }
 
 class Brain(bot: Bot) {
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private var job: Option[Behavior] = None
@@ -65,17 +68,21 @@ class Brain(bot: Bot) {
   private var mode: BrainMode = BrainModes.IdleMode
 
   private val needManager = new NeedManager
+
   def executeTask(task: Task): Future[task.Return] = {
     activeTask = Some(task)
     task.execute()
   }
+
   def executeBehavior(behavior: Behavior): Future[behavior.Return] = {
     activeBehavior = Some(behavior)
     behavior.start()
   }
 
   def registerJob(jobBehavior: Behavior) = job = Some(jobBehavior)
+
   def registerIdleBehavior(behavior: Behavior) = idle = Some(behavior)
+
   def registerNeed(need: Need) = needManager.registerNeed(need)
 
   def update(): Unit = {
@@ -108,14 +115,14 @@ class Brain(bot: Bot) {
         }
       }
     } else {
-      for(b <- activeBehavior){
-        if(b.isDone()){
+      for (b <- activeBehavior) {
+        if (b.isDone()) {
           activeBehavior = None
         }
       }
 
-      for(t <- activeTask){
-        if(t.isDone()){
+      for (t <- activeTask) {
+        if (t.isDone()) {
           activeTask = None
         }
       }
