@@ -29,7 +29,7 @@ trait Building extends Agent with Stash {
       simulation = sender()
     case PositionChange(pos) ⇒
       localPosition = pos
-      context.become(common)
+      context.become(common orElse taskHandling)
       unstashAll()
     case _ ⇒ stash()
   }
@@ -37,6 +37,8 @@ trait Building extends Agent with Stash {
   def common: Receive = {
     case RegisterOwner(o) => owner = Some(o)
   }
+
+  def taskHandling: Receive
 
 }
 

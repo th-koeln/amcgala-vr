@@ -9,8 +9,8 @@ import org.amcgala.vr.building.BuildingType.Restaurant
 import org.amcgala.CellType
 
 /**
-  * Startet die Simulation.
-  */
+ * Startet die Simulation.
+ */
 object Main extends App {
   val simulation = new Simulation(200, 200)
 
@@ -25,28 +25,30 @@ object Main extends App {
 }
 
 class SimpleNPC extends BotAgent {
-
   brain.registerJob(new JobBehavior())
   brain.registerIdleBehavior(new RandomWalkBehavior())
 }
 
 class RandomWalkBehavior()(implicit val bot: Bot) extends Behavior {
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   type Return = Unit.type
   private val target = Coordinate(Random.nextInt(200), Random.nextInt(200))
-  private var path = BresenhamIterator.bresenham(0,0,0,0)
+  private var path = BresenhamIterator.bresenham(0, 0, 0, 0)
 
   def start(): Future[Return] = {
-   for(t <- bot.executeTask(LocationService.walkTo(target)(bot))) yield {
-     done = true
-     Unit
-   }
+    for (t <- bot.executeTask(LocationService.walkTo(target)(bot))) yield {
+      done = true
+      Unit
+    }
   }
 }
 
 class JobBehavior()(implicit val bot: Bot) extends Behavior {
+
   import scala.concurrent.ExecutionContext.Implicits.global
+
   type Return = LocationService.Cell
 
 
