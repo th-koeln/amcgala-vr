@@ -1,7 +1,9 @@
 package org.amcgala.vr
 
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{ Promise, Future }
 import org.amcgala.vr.BrainModes.BrainMode
+import org.amcgala.vr.need.{ NeedManager, Need }
+import org.amcgala.vr.need.Needs.NeedIDs.NeedID
 
 object BrainModes {
 
@@ -14,7 +16,6 @@ object BrainModes {
   case object IdleMode extends BrainMode
 
 }
-
 
 trait Behavior {
   type Return
@@ -84,6 +85,7 @@ class Brain(bot: Bot) {
   def registerIdleBehavior(behavior: Behavior) = idle = Some(behavior)
 
   def registerNeed(need: Need) = needManager.registerNeed(need)
+  def removeNeed(id: NeedID): Unit = needManager.removeNeed(id)
 
   def update(): Unit = {
     if (activeBehavior == None && activeTask == None) {
@@ -101,7 +103,7 @@ class Brain(bot: Bot) {
             mode = BrainModes.JobMode
             for (j ← job) executeBehavior(j)
           case BrainModes.JobMode ⇒
-            // If it's still time for work and the last job is done, we start over again.
+            // If there is still time for work another work session and the last job is done, we start over again.
             for (j ← job) executeBehavior(j)
           case BrainModes.NeedMode ⇒
             needManager.update()
@@ -115,13 +117,13 @@ class Brain(bot: Bot) {
         }
       }
     } else {
-      for (b <- activeBehavior) {
+      for (b ← activeBehavior) {
         if (b.isDone()) {
           activeBehavior = None
         }
       }
 
-      for (t <- activeTask) {
+      for (t ← activeTask) {
         if (t.isDone()) {
           activeTask = None
         }

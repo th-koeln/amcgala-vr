@@ -73,8 +73,8 @@ sealed trait CellType {
 }
 
 /**
- * Possible [[CellType]]s of a [[org.amcgala.vr.Cell]] in the [[Simulation]]
- */
+  * Possible [[CellType]]s of a [[org.amcgala.vr.Cell]] in the [[Simulation]]
+  */
 object CellType {
 
   case object Road extends CellType {

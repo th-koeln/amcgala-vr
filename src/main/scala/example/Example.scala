@@ -41,7 +41,6 @@ object BresenhamIterator {
 
 }
 
-
 object LocationService {
   case class Coordinate(x: Int, y: Int)
   case class Cell(id: String)
@@ -69,7 +68,7 @@ object LocationService {
       if (p.hasNext) {
         val n = p.next
         bot.moveToPosition(Position(n.x, n.y))
-      }else{
+      } else {
         bot.moveToPosition(Position(coordinate.x, coordinate.y))
         done()
         result success LocationService.Cell("Yay")
@@ -82,5 +81,4 @@ object LocationService {
   def findLocation(buildingType: BuildingType)(implicit bot: Bot) = new FindLocationTask(buildingType)
   def walkTo(pos: Coordinate)(implicit bot: Bot) = new WalkToTask(pos)
 }
-
 

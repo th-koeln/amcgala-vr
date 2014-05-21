@@ -1,7 +1,7 @@
 package org.amcgala.vr
 
 import scala.util.Random
-import example.{BresenhamIterator, LocationService}
+import example.{ BresenhamIterator, LocationService }
 import example.LocationService.Coordinate
 import scala.concurrent.Future
 import org.amcgala.vr.building.TownHall
@@ -9,8 +9,8 @@ import org.amcgala.vr.building.BuildingType.Restaurant
 import org.amcgala.CellType
 
 /**
- * Startet die Simulation.
- */
+  * Startet die Simulation.
+  */
 object Main extends App {
   val simulation = new Simulation(200, 200)
 
@@ -38,7 +38,7 @@ class RandomWalkBehavior()(implicit val bot: Bot) extends Behavior {
   private var path = BresenhamIterator.bresenham(0, 0, 0, 0)
 
   def start(): Future[Return] = {
-    for (t <- bot.executeTask(LocationService.walkTo(target)(bot))) yield {
+    for (t ← bot.executeTask(LocationService.walkTo(target)(bot))) yield {
       done = true
       Unit
     }
@@ -50,7 +50,6 @@ class JobBehavior()(implicit val bot: Bot) extends Behavior {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   type Return = LocationService.Cell
-
 
   def start() = {
     for {

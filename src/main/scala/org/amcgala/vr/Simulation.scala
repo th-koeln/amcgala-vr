@@ -14,11 +14,10 @@ import org.amcgala.vr.building.Building
   */
 case class Position(x: Int, y: Int)
 
-
 /**
   * A Cell in the simulated world map.
- * @param cellType the [[CellType]] of the Cell.
- */
+  * @param cellType the [[CellType]] of the Cell.
+  */
 case class Cell(cellType: CellType)
 
 object SimulationAgent {
@@ -38,10 +37,10 @@ object SimulationAgent {
   case object Unregister
 
   /**
-   * Changes the [[CellType]] of a Cell.
-   * @param index the [[Position]] of the [[Cell]] in the world
-   * @param cellType the new [[CellType]]
-   */
+    * Changes the [[CellType]] of a Cell.
+    * @param index the [[Position]] of the [[Cell]] in the world
+    * @param cellType the new [[CellType]]
+    */
   case class CellTypeChange(index: Position, cellType: CellType)
 
   /**
@@ -83,7 +82,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
   var agentPositions = Map[ActorRef, Position]()
   var buildingPositions = Map[ActorRef, Position]()
-  
+
   val framework = Framework.getInstance(FrameworkMode.SOFTWARE)
   val scene = new Scene("vis")
   val scaleX = framework.getWidth / width
@@ -140,7 +139,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
         bot ! PoisonPill
       }
 
-    case RegisterBuilding(ref, position) =>
+    case RegisterBuilding(ref, position) ⇒
       if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
         if (field(position.x)(position.y).cellType != CellType.Forbidden) {
           ref ! BotAgent.Introduction

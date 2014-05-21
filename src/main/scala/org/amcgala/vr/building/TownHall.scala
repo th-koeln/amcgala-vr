@@ -2,7 +2,6 @@ package org.amcgala.vr.building
 
 import akka.actor.ActorRef
 
-
 object TownHall {
 
   case object RegisterBot
@@ -22,8 +21,8 @@ class TownHall extends Building {
   var knownBuildings = Set[ActorRef]()
 
   def taskHandling: Receive = {
-    case RegisterBot =>
-    case UnregisterBot =>
-    case RegisterBuilding =>
+    case RegisterBot      ⇒
+    case UnregisterBot    ⇒
+    case RegisterBuilding ⇒
   }
 }

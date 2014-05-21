@@ -7,6 +7,8 @@ import akka.pattern.ask
 import akka.util.Timeout
 import org.amcgala.vr.BotAgent.TurnLeft
 import scala.reflect.ClassTag
+import org.amcgala.vr.need.Need
+import org.amcgala.vr.need.Needs.NeedIDs.NeedID
 
 object BotAgent {
 
@@ -41,6 +43,7 @@ object BotAgent {
   case class ExecuteBehavior(behavior: Behavior)
 
   case class RegisterNeed(need: Need)
+  case class RemoveNeed(id: NeedID)
 
   case object TimeRequest
 }
@@ -66,7 +69,6 @@ trait BotAgent extends Agent with Stash {
   var simulation: ActorRef = ActorRef.noSender
 
   val brain = new Brain(Bot(self))
-
 
   registerOnTickAction("update brain", () ⇒ {
     brain.update()
@@ -112,6 +114,7 @@ trait BotAgent extends Agent with Stash {
 
   protected def needHandling: Receive = {
     case RegisterNeed(need) ⇒ brain.registerNeed(need)
+    case RemoveNeed(id)     ⇒ brain.removeNeed(id)
   }
 
   protected def positionHandling: Receive = {
@@ -203,8 +206,8 @@ trait BotAgent extends Agent with Stash {
 
   /**
     * Gets the cell at an arbitrary location on the map.
-   * @param index the index
-   * @return
+    * @param index the index
+    * @return
     */
   def cell(index: Position): Future[Cell] = (simulation ? SimulationAgent.CellAtIndexRequest(index)).mapTo[Cell]
 
@@ -245,22 +248,90 @@ case class Bot(ref: ActorRef) {
 
   private implicit val timeout = Timeout(120.seconds)
 
+  /**
+    * Left turn (defaults to a left turn of 45°).
+    */
   def turnLeft() = ref ! TurnLeft
+
+  /**
+    * Right turn (defaults to a right turn of 45°).
+    */
   def turnRight() = ref ! TurnRight
+
+  /**
+    * The bot moves one step forward.
+    */
   def moveForward() = ref ! MoveForward
+
+  /**
+    * The bot moves one step backward.
+    */
   def moveBackward() = ref ! MoveBackward
+
+  /**
+    * The bot jumps to a new position.
+    * @param pos the new position
+    */
   def moveToPosition(pos: Position) = ref ! MoveToPosition(pos)
+
+  /**
+    * The current position.
+    * @return
+    */
   def position() = (ref ? CurrentPositionRequest).mapTo[Position]
 
+  /**
+    * The bot moves with a new velocity.
+    * @param vel the new velocity
+    */
   def changeVelocity(vel: Int) = ref ! ChangeVelocity(vel)
 
+  /**
+    * Registers a new action that is executed on every simulation tick.
+    * @param handle the name of this action
+    * @param action the function to be executed
+    */
   def registerOnTickAction(handle: String, action: () ⇒ Unit) = ref ! RegisterOnTickAction(handle, action)
+
+  /**
+    * Removes an action.
+    * @param handle the handle of the action
+    */
   def removeOnTickAction(handle: String) = ref ! RemoveOnTickAction(handle)
 
+  /**
+    * Executes a [[Task]].
+    * @param task the [[Task]] to be executed
+    * @param tag class evidence
+    * @return the result of the task
+    */
   def executeTask(task: Task)(implicit tag: ClassTag[task.Return]): Future[task.Return] = (ref ? ExecuteTask(task)).mapTo[task.Return]
+
+  /**
+    * Executes a [[Behavior]]
+    * @param behavior the [[Behavior]] to be executed
+    * @param tag
+    * @return
+    */
   def executeBehavior(behavior: Behavior)(implicit tag: ClassTag[behavior.Return]): Future[behavior.Return] = {
     (ref ? ExecuteBehavior(behavior)).mapTo[behavior.Return]
   }
 
+  /**
+    * Adds a new need to the Bot's [[org.amcgala.vr.need.NeedManager]]
+    * @param need the new need
+    */
+  def registerNeed(need: Need) = ref ! RegisterNeed(need)
+
+  /**
+    * Removes a need from the [[org.amcgala.vr.need.NeedManager]].
+    * @param id the [[NeedID]]
+    */
+  def removeNeed(id: NeedID) = ref ! RemoveNeed(id)
+
+  /**
+    * Returns the current [[Time]] in the simulation.
+    * @return
+    */
   def currentTime = (ref ? TimeRequest).mapTo[Time]
 }
