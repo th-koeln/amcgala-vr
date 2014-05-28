@@ -9,6 +9,8 @@ trait SatisfactionBehavior extends Behavior {
 
 trait Need {
 
+  var value: Double
+
   def addSatisfactionBehavior(behavior: SatisfactionBehavior): Unit
 
   def satisfactionBehaviors: List[SatisfactionBehavior]
@@ -20,6 +22,8 @@ trait Need {
   def increase(delta: Double): Double
 
   def decrease(delta: Double): Double
+
+  def update(): Unit
 }
 
 object Needs {
@@ -41,6 +45,10 @@ object Needs {
     def increase(): Double = ???
 
     def increase(delta: Double): Double = ???
+
+    def update(): Unit = ???
+
+    var value: Double = 0.0
   }
 
   object Hunger {

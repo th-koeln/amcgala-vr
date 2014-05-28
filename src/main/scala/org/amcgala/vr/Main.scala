@@ -7,6 +7,8 @@ import scala.concurrent.Future
 import org.amcgala.vr.building.TownHall
 import org.amcgala.vr.building.BuildingType.Restaurant
 import org.amcgala.CellType
+import org.amcgala.vr.need.{Need, SatisfactionBehavior}
+import org.amcgala.vr.need.Needs.Hunger
 
 /**
   * Startet die Simulation.
@@ -45,11 +47,12 @@ class RandomWalkBehavior()(implicit val bot: Bot) extends Behavior {
   }
 }
 
-class JobBehavior()(implicit val bot: Bot) extends Behavior {
+class JobBehavior()(implicit val bot: Bot) extends SatisfactionBehavior {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
   type Return = LocationService.Cell
+
 
   def start() = {
     for {
@@ -57,7 +60,10 @@ class JobBehavior()(implicit val bot: Bot) extends Behavior {
       mcd ← bot.executeTask(LocationService.walkTo(pos)(bot))
     } yield {
       done = true
+      need.decrease(49)
       mcd
     }
   }
+
+  val need: Need = Hunger()
 }

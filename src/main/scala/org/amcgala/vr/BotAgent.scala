@@ -45,6 +45,8 @@ object BotAgent {
   case class RegisterNeed(need: Need)
   case class RemoveNeed(id: NeedID)
 
+  case class RequestVicinity(distance: Int)
+
   case object TimeRequest
 }
 
@@ -108,6 +110,9 @@ trait BotAgent extends Agent with Stash {
       for (r ← brain.executeTask(t)) {
         requester ! r
       }
+    case RequestVicinity(distance) =>
+      val requester = sender()
+      for(v <- vicinity(distance)) requester ! v
     case TimeRequest ⇒
       sender() ! currentTime
   }
@@ -121,12 +126,18 @@ trait BotAgent extends Agent with Stash {
     case PositionChange(pos) ⇒
       localPosition = pos
     case HeadingRequest         ⇒ sender() ! heading
-    case TurnLeft               ⇒ turnLeft()
-    case TurnRight              ⇒ turnRight()
-    case MoveBackward           ⇒ moveBackward()
-    case MoveForward            ⇒ moveForward()
-    case MoveToPosition(pos)    ⇒ moveToPosition(pos)
-    case ChangeVelocity(vel)    ⇒ velocity = vel
+    case TurnLeft               ⇒
+      if(sender() == self){
+        turnLeft()
+      }
+    case TurnRight              ⇒
+      if(sender() == self){
+        turnRight()
+      }
+    case MoveBackward           ⇒ if(sender()==self) moveBackward()
+    case MoveForward            ⇒ if(sender()==self) moveForward()
+    case MoveToPosition(pos)    ⇒ if(sender()==self) moveToPosition(pos)
+    case ChangeVelocity(vel)    ⇒ if(sender()==self) velocity = vel
     case CurrentPositionRequest ⇒ sender() ! localPosition
   }
 
@@ -334,4 +345,6 @@ case class Bot(ref: ActorRef) {
     * @return
     */
   def currentTime = (ref ? TimeRequest).mapTo[Time]
+
+  def vicinity(distance: Int): Future[Map[ActorRef, Position]] = (ref ? RequestVicinity(distance)).mapTo[Map[ActorRef, Position]]
 }
