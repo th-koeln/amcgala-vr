@@ -1,13 +1,15 @@
 package org.amcgala.vr.need
 
 import org.amcgala.vr.Behavior
-import org.amcgala.vr.need.Needs.NeedIDs.NeedID
+import org.amcgala.vr.need.Needs.NeedIDs.{HungerID, NeedID}
 
 trait SatisfactionBehavior extends Behavior {
   val need: Need
 }
 
 trait Need {
+  val id: NeedID
+  var needManager: Option[NeedManager] = None
 
   var value: Double
 
@@ -34,6 +36,7 @@ object Needs {
   }
 
   class Hunger extends Need {
+    val id = HungerID
     def addSatisfactionBehavior(behavior: SatisfactionBehavior): Unit = ???
 
     def satisfactionBehaviors: List[SatisfactionBehavior] = ???
@@ -60,8 +63,10 @@ object Needs {
 }
 
 class NeedManager {
+  private var needList = List.empty[Need]
+
   def removeNeed(id: NeedID): Unit = {
-    // TODO Hier wird ein Bedürfnis wieder aus dem Manager entfernt.
+    needList = needList.filterNot(_.id == id)
   }
 
   def getSatisfactionStrategyFor(need: Need): SatisfactionBehavior = {
@@ -75,6 +80,8 @@ class NeedManager {
   }
 
   def registerNeed(need: Need): Unit = {
+    // Zur Liste hinzufügen
+    need.needManager = Some(this)
     // TODO Hinzufügen eines neues Bedürfnis zu der Liste aller Bedürfnisse
   }
 
