@@ -37,7 +37,6 @@ class RandomWalkBehavior()(implicit val bot: Bot) extends Behavior {
 
   type Return = Unit.type
   private val target = Coordinate(Random.nextInt(200), Random.nextInt(200))
-  private var path = BresenhamIterator.bresenham(0, 0, 0, 0)
 
   def start(): Future[Return] = {
     for (t ← bot.executeTask(LocationService.walkTo(target)(bot))) yield {

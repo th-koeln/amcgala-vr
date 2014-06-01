@@ -127,17 +127,13 @@ trait BotAgent extends Agent with Stash {
       localPosition = pos
     case HeadingRequest         ⇒ sender() ! heading
     case TurnLeft               ⇒
-      if(sender() == self){
-        turnLeft()
-      }
+      turnLeft()
     case TurnRight              ⇒
-      if(sender() == self){
-        turnRight()
-      }
-    case MoveBackward           ⇒ if(sender()==self) moveBackward()
-    case MoveForward            ⇒ if(sender()==self) moveForward()
-    case MoveToPosition(pos)    ⇒ if(sender()==self) moveToPosition(pos)
-    case ChangeVelocity(vel)    ⇒ if(sender()==self) velocity = vel
+      turnRight()
+    case MoveBackward           ⇒  moveBackward()
+    case MoveForward            ⇒  moveForward()
+    case MoveToPosition(pos)    ⇒  moveToPosition(pos)
+    case ChangeVelocity(vel)    ⇒  velocity = vel
     case CurrentPositionRequest ⇒ sender() ! localPosition
   }
 
