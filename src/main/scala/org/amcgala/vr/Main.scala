@@ -20,7 +20,6 @@ object Main extends App {
     simulation.spawnBot(classOf[SimpleNPC], Position(Random.nextInt(simulation.width), Random.nextInt(simulation.height)))
   }
 
-  simulation.spawnBuilding(classOf[TownHall], Position(100, 100))
   for (x ← 50 until 150) {
     simulation.changeCellType(Position(x, 98), CellType.Road)
   }

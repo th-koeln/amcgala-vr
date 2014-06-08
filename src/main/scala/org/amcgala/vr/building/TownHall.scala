@@ -1,14 +1,18 @@
 package org.amcgala.vr.building
 
-import akka.actor.ActorRef
+import akka.actor.{Props, ActorRef}
 
 object TownHall {
 
-  case object RegisterBot
+  trait TownHallMessage
 
-  case object UnregisterBot
+  case object RegisterBot extends TownHallMessage
 
-  case object RegisterBuilding
+  case object UnregisterBot extends TownHallMessage
+
+  case object RegisterBuilding extends TownHallMessage
+
+  def props() = Props(new TownHall)
 
   // TODO Weitere Nachrichten, die von dem Dorfzentrum bearbeitet werden sollen hier ergänzen.
 }

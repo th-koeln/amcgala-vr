@@ -5,7 +5,7 @@ import scala.util.Random
 import org.amcgala._
 import org.amcgala.shape.Rectangle
 import org.amcgala.math.Vertex3f
-import org.amcgala.vr.building.Building
+import org.amcgala.vr.building.{TownHall, Building}
 
 /**
   * The absolute position of an entity in the [[Simulation]].
@@ -71,6 +71,8 @@ object SimulationAgent {
     */
   case class VicinityRequest(ref: ActorRef, distance: Double)
 
+  case class VicinityReponse(bots: Map[ActorRef, Position], buildings: Map[ActorRef, Position])
+
   def props(width: Int, height: Int) = Props(new SimulationAgent(width, height))
 }
 
@@ -79,9 +81,14 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
   import SimulationAgent._
 
   val field = Array.fill(width, height)(Cell(CellType.Floor))
-
   var agentPositions = Map[ActorRef, Position]()
   var buildingPositions = Map[ActorRef, Position]()
+
+  val townHall = context.actorOf(TownHall.props(), "town-hall")
+  val townHallLocation = Position(100,100)
+  self ! RegisterBuilding(townHall, townHallLocation)
+
+
 
   val framework = Framework.getInstance(FrameworkMode.SOFTWARE)
   val scene = new Scene("vis")
@@ -131,7 +138,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
     case RegisterAgent(bot, position) ⇒
       if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
         if (field(position.x)(position.y).cellType != CellType.Forbidden) {
-          bot ! BotAgent.Introduction
+          bot ! BotAgent.Introduction(townHallLocation)
           bot ! BotAgent.PositionChange(position)
           agentPositions = agentPositions + (bot -> position)
         }
@@ -142,7 +149,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
     case RegisterBuilding(ref, position) ⇒
       if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
         if (field(position.x)(position.y).cellType != CellType.Forbidden) {
-          ref ! BotAgent.Introduction
+          ref ! BotAgent.Introduction(townHallLocation)
           ref ! BotAgent.PositionChange(position)
           buildingPositions = buildingPositions + (ref -> position)
         }
@@ -170,7 +177,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
     case VicinityRequest(ref, dis) ⇒
       val pos = agentPositions(ref)
-      sender() ! agentPositions.filter(t ⇒ Utils.distance(pos, t._2) < dis && t._1 != ref)
+      sender() ! VicinityReponse(agentPositions.filter(t ⇒ Utils.distance(pos, t._2) < dis && t._1 != ref), buildingPositions.filter(t ⇒ Utils.distance(pos, t._2) < dis && t._1 != ref))
 
     case CellRequest(ref) ⇒
       val position = agentPositions(ref)

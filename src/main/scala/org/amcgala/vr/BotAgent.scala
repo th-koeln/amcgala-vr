@@ -2,6 +2,7 @@ package org.amcgala.vr
 
 import akka.actor.{ Stash, PoisonPill, ActorRef }
 import org.amcgala.vr.Headings.Heading
+import org.amcgala.vr.SimulationAgent.VicinityReponse
 import scala.concurrent.{ ExecutionContext, Future }
 import akka.pattern.ask
 import akka.util.Timeout
@@ -21,7 +22,7 @@ object BotAgent {
   /**
     * Introduces the [[Simulation]] to this Bot.
     */
-  case object Introduction
+  case class Introduction(townHall: Position)
 
   /**
     * The [[BotAgent]] replies with its current [[Heading]].
@@ -45,7 +46,8 @@ object BotAgent {
   case class RegisterNeed(need: Need)
   case class RemoveNeed(id: NeedID)
 
-  case class RequestVicinity(distance: Int)
+  case class VicinityRequest(distance: Int)
+  case object TownHallLocationRequest
 
   case object TimeRequest
 }
@@ -69,6 +71,8 @@ trait BotAgent extends Agent with Stash {
   var heading: Heading = Headings.Up
   var velocity: Int = 1
   var simulation: ActorRef = ActorRef.noSender
+  
+  private var thLocation = Position(0,0)
 
   val brain = new Brain(Bot(self))
 
@@ -90,8 +94,10 @@ trait BotAgent extends Agent with Stash {
   }
 
   def receive: Receive = {
-    case Introduction ⇒
+    case Introduction(townhall) ⇒
       simulation = sender()
+      thLocation = townhall
+     
     case PositionChange(pos) ⇒
       localPosition = pos
       context.become(positionHandling orElse tickHandling orElse taskHandling orElse needHandling)
@@ -110,11 +116,12 @@ trait BotAgent extends Agent with Stash {
       for (r ← brain.executeTask(t)) {
         requester ! r
       }
-    case RequestVicinity(distance) =>
+    case VicinityRequest(distance) =>
       val requester = sender()
       for(v <- vicinity(distance)) requester ! v
     case TimeRequest ⇒
       sender() ! currentTime
+    case TownHallLocationRequest => sender() ! thLocation
   }
 
   protected def needHandling: Receive = {
@@ -223,7 +230,7 @@ trait BotAgent extends Agent with Stash {
     * @param distance the radius of the vicinity
     * @return all [[ActorRef]]s and their positions in the [[Simulation]]
     */
-  def vicinity(distance: Int): Future[Map[ActorRef, Position]] = (simulation ? SimulationAgent.VicinityRequest(self, distance)).mapTo[Map[ActorRef, Position]]
+  def vicinity(distance: Int): Future[VicinityReponse] = (simulation ? SimulationAgent.VicinityRequest(self, distance)).mapTo[VicinityReponse]
 
   /**
     * Requests the current [[Heading]] of a Bot.
@@ -243,6 +250,8 @@ trait BotAgent extends Agent with Stash {
   def registerNeed(need: Need) = brain.registerNeed(need)
 
   def registerJob(job: Behavior) = brain.registerJob(job)
+  
+  def townHallLocation: Position = thLocation
 }
 
 case class Bot(ref: ActorRef) {
@@ -342,5 +351,7 @@ case class Bot(ref: ActorRef) {
     */
   def currentTime = (ref ? TimeRequest).mapTo[Time]
 
-  def vicinity(distance: Int): Future[Map[ActorRef, Position]] = (ref ? RequestVicinity(distance)).mapTo[Map[ActorRef, Position]]
+  def vicinity(distance: Int): Future[VicinityReponse] = (ref ? VicinityRequest(distance)).mapTo[VicinityReponse]
+
+  def townHall = (ref ? TownHallLocationRequest).mapTo[Position]
 }
