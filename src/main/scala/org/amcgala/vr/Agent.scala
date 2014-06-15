@@ -22,7 +22,7 @@ trait Agent extends Actor {
   private var ticks: Map[String, () ⇒ Unit] = Map()
 
   private var partials: Vector[Actor.Receive] = Vector()
-  private var customReceive: Receive = Actor.emptyBehavior
+  protected var customReceive: Receive = Actor.emptyBehavior
   private var time = Time(0, 0)
 
   context.become(receive orElse tickHandling orElse customReceive)

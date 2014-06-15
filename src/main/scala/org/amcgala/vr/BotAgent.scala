@@ -100,10 +100,12 @@ trait BotAgent extends Agent with Stash {
      
     case PositionChange(pos) ⇒
       localPosition = pos
-      context.become(positionHandling orElse tickHandling orElse taskHandling orElse needHandling)
+      context.become(defaultHandling)
       unstashAll()
     case _ ⇒ stash()
   }
+
+  protected def defaultHandling = positionHandling orElse tickHandling orElse taskHandling orElse needHandling orElse customReceive
 
   protected def taskHandling: Receive = {
     case ExecuteBehavior(b) ⇒

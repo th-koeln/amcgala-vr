@@ -1,5 +1,7 @@
 package org.amcgala.vr
 
+import akka.actor.{Actor, PoisonPill, ActorRef}
+
 import scala.util.Random
 import example.{ BresenhamIterator, LocationService }
 import example.LocationService.Coordinate
@@ -38,12 +40,17 @@ class RandomWalkBehavior()(implicit val bot: Bot) extends Behavior {
   private val target = Coordinate(Random.nextInt(200), Random.nextInt(200))
 
   def start(): Future[Return] = {
-    for (t ← bot.executeTask(LocationService.walkTo(target)(bot))) yield {
+    for {
+      hall <- bot.townHall
+      t ← bot.executeTask(LocationService.walkTo(Coordinate(hall.x, hall.y))(bot))
+    } yield {
       done = true
       Unit
     }
   }
 }
+
+
 
 class JobBehavior()(implicit val bot: Bot) extends SatisfactionBehavior {
 
