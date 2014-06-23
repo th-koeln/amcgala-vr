@@ -71,7 +71,7 @@ trait BotAgent extends Agent with Stash {
   var knownCells = Map[Coordinate, Cell]()
 
   var heading: Heading = Headings.Up
-  var velocity: Int = 1
+  var velocity: Double = 1.0
   var simulation: ActorRef = ActorRef.noSender
   
   private var thLocation = Coordinate(0,0)
