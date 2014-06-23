@@ -61,7 +61,7 @@ class JobBehavior()(implicit val bot: Bot) extends SatisfactionBehavior {
     for {
       pos ← bot.executeTask(LocationService.findLocation(Restaurant)(bot))
       mcd ← bot.executeTask(LocationService.walkTo(pos)(bot))
-      cells <- bot.visibleCells(1.5)
+      cells <- bot.visibleCells(2)
     } yield {
       println(cells)
       done = true

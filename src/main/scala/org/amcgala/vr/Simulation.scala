@@ -12,7 +12,7 @@ import org.amcgala.vr.building.{TownHall, Building}
   * @param x
   * @param y
   */
-case class Coordinate(x: Double, y: Double)
+case class Coordinate(x: Int, y: Int)
 
 /**
   * A Cell in the simulated world map.
@@ -69,11 +69,11 @@ object SimulationAgent {
     * @param ref the [[ActorRef]] of the requesting Bot
     * @param distance the radius of the vicinity
     */
-  case class VicinityRequest(ref: ActorRef, distance: Double)
+  case class VicinityRequest(ref: ActorRef, distance: Int)
 
   case class VicinityReponse(bots: Map[ActorRef, Coordinate], buildings: Map[ActorRef, Coordinate])
 
-  case class VisibleCellsRequest(ref: ActorRef, distance: Double)
+  case class VisibleCellsRequest(ref: ActorRef, distance: Int)
 
   def props(width: Int, height: Int) = Props(new SimulationAgent(width, height))
 }
@@ -182,7 +182,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
     case VicinityRequest(ref, dis) ⇒
       val pos = agentPositions(ref)
-      sender() ! VicinityReponse(agentPositions.filter(t ⇒ Utils.distance(pos, t._2) <= dis && t._1 != ref), buildingPositions.filter(t ⇒ Utils.distance(pos, t._2) < dis && t._1 != ref))
+      sender() ! VicinityReponse(agentPositions.filter(t ⇒ Utils.manhattanDistance(pos, t._2) <= dis && t._1 != ref), buildingPositions.filter(t ⇒ Utils.manhattanDistance(pos, t._2) < dis && t._1 != ref))
 
     case CellRequest(ref) ⇒
       val position = agentPositions(ref)
@@ -197,7 +197,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
     case VisibleCellsRequest(ref, distance) =>
       val position = agentPositions(ref)
-      val cells = field.filter(e => Utils.distance(position, e._1) <= distance).toMap
+      val cells = field.filter(e => Utils.manhattanDistance(position, e._1) <= distance).toMap
       sender() ! cells
 
   }

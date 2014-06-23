@@ -46,9 +46,9 @@ object BotAgent {
   case class RegisterNeed(need: Need)
   case class RemoveNeed(id: NeedID)
 
-  case class VicinityRequest(distance: Double)
+  case class VicinityRequest(distance: Int)
 
-  case class VisibleCellsRequest(distance: Double)
+  case class VisibleCellsRequest(distance: Int)
   case object TownHallLocationRequest
 
   case object TimeRequest
@@ -240,9 +240,9 @@ trait BotAgent extends Agent with Stash {
     * @param distance the radius of the vicinity
     * @return all [[ActorRef]]s and their positions in the [[Simulation]]
     */
-  def vicinity(distance: Double): Future[VicinityReponse] = (simulation ? SimulationAgent.VicinityRequest(self, distance)).mapTo[VicinityReponse]
+  def vicinity(distance: Int): Future[VicinityReponse] = (simulation ? SimulationAgent.VicinityRequest(self, distance)).mapTo[VicinityReponse]
 
-  def visibleCells(distance: Double): Future[Map[Coordinate, Cell]] = (simulation ? SimulationAgent.VisibleCellsRequest(self, distance)).mapTo[Map[Coordinate, Cell]]
+  def visibleCells(distance: Int): Future[Map[Coordinate, Cell]] = (simulation ? SimulationAgent.VisibleCellsRequest(self, distance)).mapTo[Map[Coordinate, Cell]]
 
   /**
     * Requests the current [[Heading]] of a Bot.
@@ -363,11 +363,11 @@ case class Bot(ref: ActorRef) {
     */
   def currentTime = (ref ? TimeRequest).mapTo[Time]
 
-  def vicinity(distance: Double): Future[VicinityReponse] = (ref ? VicinityRequest(distance)).mapTo[VicinityReponse]
+  def vicinity(distance: Int): Future[VicinityReponse] = (ref ? VicinityRequest(distance)).mapTo[VicinityReponse]
 
   def townHall = (ref ? TownHallLocationRequest).mapTo[Coordinate]
 
   def currentCell: Future[Cell] = (ref ? CellRequest).mapTo[Cell]
 
-  def visibleCells(distance: Double): Future[Map[Coordinate, Cell]] = (ref ? VisibleCellsRequest(distance)).mapTo[Map[Coordinate, Cell]]
+  def visibleCells(distance: Int): Future[Map[Coordinate, Cell]] = (ref ? VisibleCellsRequest(distance)).mapTo[Map[Coordinate, Cell]]
 }
