@@ -27,27 +27,27 @@ object SimulationAgent {
     * @param bot the [[ActorRef]] of the [[BotAgent]]
     * @param position the [[Coordinate]] in the simulated world
     */
-  case class RegisterAgent(bot: ActorRef, position: Coordinate)
+  case class RegisterAgentRequest(bot: ActorRef, position: Coordinate)
 
-  case class RegisterBuilding(bot: ActorRef, position: Coordinate)
+  case class RegisterBuildingRequest(bot: ActorRef, position: Coordinate)
 
   /**
     * Removes a [[BotAgent]] from the [[SimulationAgent]]
     */
-  case object Unregister
+  case object UnregisterRequest
 
   /**
     * Changes the [[CellType]] of a Cell.
     * @param index the [[Coordinate]] of the [[Cell]] in the world
     * @param cellType the new [[CellType]]
     */
-  case class CellTypeChange(index: Coordinate, cellType: CellType)
+  case class CellTypeChangeRequest(index: Coordinate, cellType: CellType)
 
   /**
     * Changes the [[Coordinate]] of a [[BotAgent]].
     * @param position the new position
     */
-  case class PositionChange(position: Coordinate)
+  case class PositionChangeRequest(position: Coordinate)
 
   /**
     * A position request from someone. The [[SimulationAgent]]'s response is the current position of the Bot.
@@ -92,7 +92,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
   val townHall = context.actorOf(TownHall.props(), "town-hall")
   val townHallLocation = Coordinate(100,100)
-  self ! RegisterBuilding(townHall, townHallLocation)
+  self ! RegisterBuildingRequest(townHall, townHallLocation)
 
 
 
@@ -139,7 +139,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
   })
 
   def receive: Receive = {
-    case RegisterAgent(bot, position) ⇒
+    case RegisterAgentRequest(bot, position) ⇒
       if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height) {
         if (field(position).cellType != CellType.Forbidden) {
           bot ! BotAgent.Introduction(townHallLocation)
@@ -150,24 +150,24 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
         bot ! PoisonPill
       }
 
-    case RegisterBuilding(ref, position) ⇒
+    case RegisterBuildingRequest(ref, position) ⇒
       field.get(position) match {
         case Some(cell) =>
           if (cell.cellType != CellType.Forbidden) {
             ref ! BotAgent.Introduction(townHallLocation)
-            ref ! BotAgent.PositionChange(position)
+            ref ! SimulationAgent.PositionChangeRequest(position)
             buildingPositions = buildingPositions + (ref -> position)
           }
         case None =>  ref ! PoisonPill
       }
 
 
-    case CellTypeChange(coordinate, cellType) ⇒
+    case CellTypeChangeRequest(coordinate, cellType) ⇒
       for(cell <- field.get(coordinate)){
         field += (coordinate -> Cell(cellType))
       }
 
-    case PositionChange(position) ⇒
+    case PositionChangeRequest(position) ⇒
       for(cell <- field.get(position)){
         if (cell.cellType != CellType.Forbidden) {
           agentPositions = agentPositions + (sender() -> position)
@@ -182,7 +182,8 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
     case VicinityRequest(ref, dis) ⇒
       val pos = agentPositions(ref)
-      sender() ! VicinityReponse(agentPositions.filter(t ⇒ Utils.manhattanDistance(pos, t._2) <= dis && t._1 != ref), buildingPositions.filter(t ⇒ Utils.manhattanDistance(pos, t._2) < dis && t._1 != ref))
+      val v = VicinityReponse(agentPositions.filter(t ⇒ Utils.manhattanDistance(pos, t._2) <= dis && t._1 != ref), buildingPositions.filter(t ⇒ Utils.manhattanDistance(pos, t._2) < dis && t._1 != ref))
+      sender() ! v
 
     case CellRequest(ref) ⇒
       val position = agentPositions(ref)
@@ -192,7 +193,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
       for(cell <- field.get(coordinate)){
         sender() ! cell
       }
-    case Unregister ⇒
+    case UnregisterRequest ⇒
       agentPositions = agentPositions - sender()
 
     case VisibleCellsRequest(ref, distance) =>
@@ -220,24 +221,24 @@ class Simulation(val width: Int, val height: Int)(implicit system: ActorSystem) 
     */
   def spawnBot[T <: BotAgent](cls: Class[T], position: Coordinate): Bot = {
     val bot = system.actorOf(Props(cls))
-    sim ! RegisterAgent(bot, position)
+    sim ! RegisterAgentRequest(bot, position)
     Bot(bot)
   }
 
   def spawnBot[T <: BotAgent](cls: Class[T]): Bot = {
     val bot = system.actorOf(Props(cls))
-    sim ! RegisterAgent(bot, randomPosition())
+    sim ! RegisterAgentRequest(bot, randomPosition())
     Bot(bot)
   }
 
   def spawnBuilding[T <: Building](cls: Class[T], position: Coordinate): ActorRef = {
     val building = system.actorOf(Props(cls))
-    sim ! RegisterBuilding(building, position)
+    sim ! RegisterBuildingRequest(building, position)
     building
   }
 
   def changeCellType(index: Coordinate, cellType: CellType) = {
-    sim ! CellTypeChange(index, cellType)
+    sim ! CellTypeChangeRequest(index, cellType)
   }
 
   def randomPosition(): Coordinate = Coordinate(Random.nextInt(width), Random.nextInt(height))

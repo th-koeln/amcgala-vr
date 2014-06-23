@@ -24,8 +24,9 @@ class TownHall extends Building {
   var knownBots = Set[ActorRef]()
   var knownBuildings = Set[ActorRef]()
 
-  def taskHandling: Receive = {
+  val taskHandling: Receive = {
     case RegisterBot      ⇒
+      println("Registering")
     case UnregisterBot    ⇒
     case RegisterBuilding ⇒
   }

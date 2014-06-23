@@ -1,6 +1,7 @@
 package org.amcgala.vr
 
 import akka.actor.{Actor, PoisonPill, ActorRef}
+import org.amcgala.vr.building.TownHall
 
 import scala.util.Random
 import example.{ BresenhamIterator, LocationService }
@@ -59,14 +60,15 @@ class JobBehavior()(implicit val bot: Bot) extends SatisfactionBehavior {
 
   def start() = {
     for {
-      pos ← bot.executeTask(LocationService.findLocation(Restaurant)(bot))
-      mcd ← bot.executeTask(LocationService.walkTo(pos)(bot))
+      pos <- bot.townHall
+      thp ← bot.executeTask(LocationService.walkTo(pos)(bot))
+      v <- bot.vicinity(1)
       cells <- bot.visibleCells(2)
     } yield {
-      println(cells)
+      val th = v.buildings.find(_._1.path.toString.contains("town"))
+      th map (_._1 ! TownHall.RegisterBot)
       done = true
-      need.decrease(49)
-      mcd
+      thp
     }
   }
 

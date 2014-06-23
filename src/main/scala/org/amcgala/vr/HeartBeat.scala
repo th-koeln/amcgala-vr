@@ -28,7 +28,7 @@ class HeartBeat extends Actor {
     case Ping ⇒
       minutes = (minutes + 5) % 60
       hours = if (minutes == 0) (hours + 1) % 24 else hours
-      println(s"$hours::$minutes")
+      // println(s"$hours::$minutes")
       context.system.eventStream.publish(Tick(Time(hours, minutes)))
   }
 }

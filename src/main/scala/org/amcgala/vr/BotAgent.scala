@@ -92,7 +92,7 @@ trait BotAgent extends Agent with Stash {
   })
 
   override def postStop(): Unit = {
-    simulation ! SimulationAgent.Unregister
+    simulation ! SimulationAgent.UnregisterRequest
   }
 
   def receive: Receive = {
@@ -122,7 +122,9 @@ trait BotAgent extends Agent with Stash {
       }
     case VicinityRequest(distance) =>
       val requester = sender()
-      for(v <- vicinity(distance)) requester ! v
+      for(v <- vicinity(distance)){
+        requester ! v
+      }
     case VisibleCellsRequest(distance) =>
       val requester = sender()
       for(v <- visibleCells(distance)) requester ! v
@@ -201,7 +203,7 @@ trait BotAgent extends Agent with Stash {
     */
   def moveForward(): Unit = {
     for (pos ← position()) {
-      simulation ! SimulationAgent.PositionChange(Coordinate(pos.x + heading.x * velocity, pos.y + heading.y * velocity))
+      simulation ! SimulationAgent.PositionChangeRequest(Coordinate(pos.x + heading.x * velocity, pos.y + heading.y * velocity))
     }
   }
 
@@ -210,11 +212,11 @@ trait BotAgent extends Agent with Stash {
     */
   def moveBackward(): Unit = {
     for (pos ← position()) {
-      simulation ! SimulationAgent.PositionChange(Coordinate(pos.x - heading.x * velocity, pos.y - heading.y * velocity))
+      simulation ! SimulationAgent.PositionChangeRequest(Coordinate(pos.x - heading.x * velocity, pos.y - heading.y * velocity))
     }
   }
 
-  def moveToPosition(pos: Coordinate) = simulation ! SimulationAgent.PositionChange(pos)
+  def moveToPosition(pos: Coordinate) = simulation ! SimulationAgent.PositionChangeRequest(pos)
 
   /**
     * Gets the current [[Coordinate]] of this Bot from the [[Simulation]].
@@ -240,7 +242,9 @@ trait BotAgent extends Agent with Stash {
     * @param distance the radius of the vicinity
     * @return all [[ActorRef]]s and their positions in the [[Simulation]]
     */
-  def vicinity(distance: Int): Future[VicinityReponse] = (simulation ? SimulationAgent.VicinityRequest(self, distance)).mapTo[VicinityReponse]
+  def vicinity(distance: Int): Future[VicinityReponse] = {
+    (simulation ? SimulationAgent.VicinityRequest(self, distance)).mapTo[VicinityReponse]
+  }
 
   def visibleCells(distance: Int): Future[Map[Coordinate, Cell]] = (simulation ? SimulationAgent.VisibleCellsRequest(self, distance)).mapTo[Map[Coordinate, Cell]]
 

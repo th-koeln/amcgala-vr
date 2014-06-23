@@ -2,7 +2,7 @@ package org.amcgala.vr.building
 
 import org.amcgala.vr.{Coordinate, SimulationAgent, Agent}
 import akka.actor.{ Stash, ActorRef }
-import org.amcgala.vr.SimulationAgent.PositionChange
+import org.amcgala.vr.SimulationAgent.PositionChangeRequest
 import org.amcgala.vr.BotAgent.Introduction
 
 object Building {
@@ -23,13 +23,13 @@ trait Building extends Agent with Stash {
   var localPosition = Coordinate(0, 0)
 
   override def postStop(): Unit = {
-    simulation ! SimulationAgent.Unregister
+    simulation ! SimulationAgent.UnregisterRequest
   }
 
   def receive: Receive = {
     case Introduction ⇒
       simulation = sender()
-    case PositionChange(pos) ⇒
+    case PositionChangeRequest(pos) ⇒
       localPosition = pos
       context.become(common orElse taskHandling)
       unstashAll()
@@ -41,7 +41,7 @@ trait Building extends Agent with Stash {
     case ChangeOrientation(o) => orientation = o
   }
 
-  def taskHandling: Receive
+  val taskHandling: Receive
 
 }
 
