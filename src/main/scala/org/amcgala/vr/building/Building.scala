@@ -1,6 +1,6 @@
 package org.amcgala.vr.building
 
-import org.amcgala.vr.{ Position, SimulationAgent, Agent }
+import org.amcgala.vr.{Coordinate, SimulationAgent, Agent}
 import akka.actor.{ Stash, ActorRef }
 import org.amcgala.vr.SimulationAgent.PositionChange
 import org.amcgala.vr.BotAgent.Introduction
@@ -20,7 +20,7 @@ trait Building extends Agent with Stash {
 
   var owner: Option[ActorRef] = None
   var simulation: ActorRef = ActorRef.noSender
-  var localPosition: Position = Position(0, 0)
+  var localPosition = Coordinate(0, 0)
 
   override def postStop(): Unit = {
     simulation ! SimulationAgent.Unregister

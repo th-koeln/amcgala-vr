@@ -2,7 +2,7 @@ package org.amcgala.vr
 
 import akka.actor.{ Stash, PoisonPill, ActorRef }
 import org.amcgala.vr.Headings.Heading
-import org.amcgala.vr.SimulationAgent.VicinityReponse
+import org.amcgala.vr.SimulationAgent.{CellRequest, VicinityReponse}
 import scala.concurrent.{ ExecutionContext, Future }
 import akka.pattern.ask
 import akka.util.Timeout
@@ -14,15 +14,15 @@ import org.amcgala.vr.need.Needs.NeedIDs.NeedID
 object BotAgent {
 
   /**
-    * New [[Position]] of this Bot.
-    * @param pos the new [[Position]]
+    * New [[Coordinate]] of this Bot.
+    * @param pos the new [[Coordinate]]
     */
-  case class PositionChange(pos: Position)
+  case class PositionChange(pos: Coordinate)
 
   /**
     * Introduces the [[Simulation]] to this Bot.
     */
-  case class Introduction(townHall: Position)
+  case class Introduction(townHall: Coordinate)
 
   /**
     * The [[BotAgent]] replies with its current [[Heading]].
@@ -34,7 +34,7 @@ object BotAgent {
   case object MoveForward
   case object MoveBackward
 
-  case class MoveToPosition(position: Position)
+  case class MoveToPosition(position: Coordinate)
 
   case class ChangeVelocity(vel: Int)
 
@@ -46,7 +46,9 @@ object BotAgent {
   case class RegisterNeed(need: Need)
   case class RemoveNeed(id: NeedID)
 
-  case class VicinityRequest(distance: Int)
+  case class VicinityRequest(distance: Double)
+
+  case class VisibleCellsRequest(distance: Double)
   case object TownHallLocationRequest
 
   case object TimeRequest
@@ -64,15 +66,15 @@ trait BotAgent extends Agent with Stash {
   implicit val ec = ExecutionContext.global
   implicit val me = Bot(self)
 
-  var localPosition: Position = Position(0, 0)
-  var currentPosition: Position = Position(0, 0)
-  var knownCells = Map[Position, Cell]()
+  var localPosition: Coordinate = Coordinate(0, 0)
+  var currentPosition: Coordinate = Coordinate(0, 0)
+  var knownCells = Map[Coordinate, Cell]()
 
   var heading: Heading = Headings.Up
   var velocity: Int = 1
   var simulation: ActorRef = ActorRef.noSender
   
-  private var thLocation = Position(0,0)
+  private var thLocation = Coordinate(0,0)
 
   val brain = new Brain(Bot(self))
 
@@ -121,9 +123,15 @@ trait BotAgent extends Agent with Stash {
     case VicinityRequest(distance) =>
       val requester = sender()
       for(v <- vicinity(distance)) requester ! v
+    case VisibleCellsRequest(distance) =>
+      val requester = sender()
+      for(v <- visibleCells(distance)) requester ! v
     case TimeRequest ⇒
       sender() ! currentTime
     case TownHallLocationRequest => sender() ! thLocation
+    case CellRequest =>
+      val requester = sender()
+      for(c <- cell()) requester ! c
   }
 
   protected def needHandling: Receive = {
@@ -193,7 +201,7 @@ trait BotAgent extends Agent with Stash {
     */
   def moveForward(): Unit = {
     for (pos ← position()) {
-      simulation ! SimulationAgent.PositionChange(Position(pos.x + heading.x * velocity, pos.y + heading.y * velocity))
+      simulation ! SimulationAgent.PositionChange(Coordinate(pos.x + heading.x * velocity, pos.y + heading.y * velocity))
     }
   }
 
@@ -202,17 +210,17 @@ trait BotAgent extends Agent with Stash {
     */
   def moveBackward(): Unit = {
     for (pos ← position()) {
-      simulation ! SimulationAgent.PositionChange(Position(pos.x - heading.x * velocity, pos.y - heading.y * velocity))
+      simulation ! SimulationAgent.PositionChange(Coordinate(pos.x - heading.x * velocity, pos.y - heading.y * velocity))
     }
   }
 
-  def moveToPosition(pos: Position) = simulation ! SimulationAgent.PositionChange(pos)
+  def moveToPosition(pos: Coordinate) = simulation ! SimulationAgent.PositionChange(pos)
 
   /**
-    * Gets the current [[Position]] of this Bot from the [[Simulation]].
+    * Gets the current [[Coordinate]] of this Bot from the [[Simulation]].
     * @return the current position
     */
-  def position(): Future[Position] = (simulation ? SimulationAgent.PositionRequest(self)).mapTo[Position]
+  def position(): Future[Coordinate] = (simulation ? SimulationAgent.PositionRequest(self)).mapTo[Coordinate]
 
   /**
     * Gets the current cell from the [[Simulation]].
@@ -225,14 +233,16 @@ trait BotAgent extends Agent with Stash {
     * @param index the index
     * @return
     */
-  def cell(index: Position): Future[Cell] = (simulation ? SimulationAgent.CellAtIndexRequest(index)).mapTo[Cell]
+  def cell(index: Coordinate): Future[Cell] = (simulation ? SimulationAgent.CellAtIndexRequest(index)).mapTo[Cell]
 
   /**
     * Gets all [[BotAgent]]s in the vicinity of this Bot.
     * @param distance the radius of the vicinity
     * @return all [[ActorRef]]s and their positions in the [[Simulation]]
     */
-  def vicinity(distance: Int): Future[VicinityReponse] = (simulation ? SimulationAgent.VicinityRequest(self, distance)).mapTo[VicinityReponse]
+  def vicinity(distance: Double): Future[VicinityReponse] = (simulation ? SimulationAgent.VicinityRequest(self, distance)).mapTo[VicinityReponse]
+
+  def visibleCells(distance: Double): Future[Map[Coordinate, Cell]] = (simulation ? SimulationAgent.VisibleCellsRequest(self, distance)).mapTo[Map[Coordinate, Cell]]
 
   /**
     * Requests the current [[Heading]] of a Bot.
@@ -253,7 +263,7 @@ trait BotAgent extends Agent with Stash {
 
   def registerJob(job: Behavior) = brain.registerJob(job)
   
-  def townHallLocation: Position = thLocation
+  def townHallLocation: Coordinate = thLocation
 }
 
 case class Bot(ref: ActorRef) {
@@ -290,13 +300,13 @@ case class Bot(ref: ActorRef) {
     * The bot jumps to a new position.
     * @param pos the new position
     */
-  def moveToPosition(pos: Position) = ref ! MoveToPosition(pos)
+  def moveToPosition(pos: Coordinate) = ref ! MoveToPosition(pos)
 
   /**
     * The current position.
     * @return
     */
-  def position() = (ref ? CurrentPositionRequest).mapTo[Position]
+  def position() = (ref ? CurrentPositionRequest).mapTo[Coordinate]
 
   /**
     * The bot moves with a new velocity.
@@ -353,7 +363,11 @@ case class Bot(ref: ActorRef) {
     */
   def currentTime = (ref ? TimeRequest).mapTo[Time]
 
-  def vicinity(distance: Int): Future[VicinityReponse] = (ref ? VicinityRequest(distance)).mapTo[VicinityReponse]
+  def vicinity(distance: Double): Future[VicinityReponse] = (ref ? VicinityRequest(distance)).mapTo[VicinityReponse]
 
-  def townHall = (ref ? TownHallLocationRequest).mapTo[Position]
+  def townHall = (ref ? TownHallLocationRequest).mapTo[Coordinate]
+
+  def currentCell: Future[Cell] = (ref ? CellRequest).mapTo[Cell]
+
+  def visibleCells(distance: Double): Future[Map[Coordinate, Cell]] = (ref ? VisibleCellsRequest(distance)).mapTo[Map[Coordinate, Cell]]
 }

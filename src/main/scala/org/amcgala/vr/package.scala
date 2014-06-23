@@ -62,7 +62,7 @@ package object vr {
   }
 
   object Utils {
-    def distance(positionA: Position, positionB: Position): Double = scala.math.sqrt(scala.math.pow(positionA.x - positionB.x, 2) + scala.math.pow(positionA.y - positionB.y, 2))
+    def distance(positionA: Coordinate, positionB: Coordinate): Double = scala.math.sqrt(scala.math.pow(positionA.x - positionB.x, 2) + scala.math.pow(positionA.y - positionB.y, 2))
   }
 
 }

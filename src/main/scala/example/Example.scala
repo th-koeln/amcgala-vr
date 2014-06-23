@@ -2,8 +2,6 @@ package example
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.amcgala.vr._
-import org.amcgala.vr.Position
-import example.LocationService.Coordinate
 import org.amcgala.vr.building.BuildingType
 
 object BresenhamIterator {
@@ -42,8 +40,7 @@ object BresenhamIterator {
 }
 
 object LocationService {
-  case class Coordinate(x: Int, y: Int)
-  case class Cell(id: String)
+
 
   class FindLocationTask(val buildingType: BuildingType)(implicit val bot: Bot) extends Task {
     type Return = Coordinate
@@ -56,22 +53,22 @@ object LocationService {
 
   class WalkToTask(coordinate: Coordinate)(implicit val bot: Bot) extends MultiStepTask {
     import scala.concurrent._
-    type Return = LocationService.Cell
+    type Return = Cell
 
     private var p = BresenhamIterator.bresenham(0, 0, 0, 0)
 
     for (pos ← bot.position()) {
-      p = BresenhamIterator.bresenham(pos.x.toInt, pos.y.toInt, coordinate.x, coordinate.y)
+      p = BresenhamIterator.bresenham(pos.x.toInt, pos.y.toInt, coordinate.x.toInt, coordinate.y.toInt)
     }
 
     override def onTick(): Unit = {
       if (p.hasNext) {
         val n = p.next
-        bot.moveToPosition(Position(n.x, n.y))
+        bot.moveToPosition(n)
       } else {
-        bot.moveToPosition(Position(coordinate.x, coordinate.y))
+        bot.moveToPosition(coordinate)
         done()
-        result success LocationService.Cell("Yay")
+        for(c <- bot.currentCell) result success c
       }
     }
 
