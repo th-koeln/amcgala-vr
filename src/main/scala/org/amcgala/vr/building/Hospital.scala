@@ -10,7 +10,7 @@ class Hospital extends Building {
 
   import Hospital._
 
-  def taskHandling: Receive = {
+  val taskHandling: Receive = {
     case TreatmentRequest ⇒
     // TODO jemand muss geheilt werden.
     // TODO ist er im Hospital oder schreit er einmal quer über die Map?

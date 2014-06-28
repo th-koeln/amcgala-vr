@@ -1,7 +1,7 @@
 package org.amcgala.vr.need
 
 import org.amcgala.vr.Behavior
-import org.amcgala.vr.need.Needs.NeedIDs.{HungerID, NeedID}
+import org.amcgala.vr.need.Needs.NeedIDs.{ HungerID, NeedID }
 
 trait SatisfactionBehavior extends Behavior {
   val need: Need

@@ -10,5 +10,5 @@ class LivingQuarters extends Building {
 
   import LivingQuarters._
 
-  def taskHandling: Receive = ???
+  val taskHandling: Receive = ???
 }

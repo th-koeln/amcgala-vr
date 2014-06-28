@@ -63,7 +63,7 @@ package object vr {
 
   object Utils {
     //def distance(positionA: Coordinate, positionB: Coordinate): Double = scala.math.sqrt(scala.math.pow(positionA.x - positionB.x, 2) + scala.math.pow(positionA.y - positionB.y, 2))
-    def manhattanDistance(c1: Coordinate, c2: Coordinate): Int = scala.math.abs(c1.x - c2.x) + scala.math.abs(c1.y-c2.y)
+    def manhattanDistance(c1: Coordinate, c2: Coordinate): Int = scala.math.abs(c1.x - c2.x) + scala.math.abs(c1.y - c2.y)
   }
 
 }

@@ -5,7 +5,7 @@ import scala.util.Random
 import org.amcgala._
 import org.amcgala.shape.Rectangle
 import org.amcgala.math.Vertex3f
-import org.amcgala.vr.building.{TownHall, Building}
+import org.amcgala.vr.building.{ BuildingType, TownHall, Building }
 
 /**
   * The absolute position of an entity in the [[Simulation]].
@@ -29,7 +29,7 @@ object SimulationAgent {
     */
   case class RegisterAgentRequest(bot: ActorRef, position: Coordinate)
 
-  case class RegisterBuildingRequest(bot: ActorRef, position: Coordinate)
+  case class RegisterBuildingRequest(bot: ActorRef, position: Coordinate, buildingType: BuildingType)
 
   /**
     * Removes a [[BotAgent]] from the [[SimulationAgent]]
@@ -71,7 +71,7 @@ object SimulationAgent {
     */
   case class VicinityRequest(ref: ActorRef, distance: Int)
 
-  case class VicinityReponse(bots: Map[ActorRef, Coordinate], buildings: Map[ActorRef, Coordinate])
+  case class VicinityReponse(bots: Map[ActorRef, Coordinate], buildings: Map[ActorRef, (Coordinate, BuildingType)])
 
   case class VisibleCellsRequest(ref: ActorRef, distance: Int)
 
@@ -82,19 +82,17 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
   import SimulationAgent._
 
-  var field = (for{
-    x <- 0 until width
-    y <- 0 until height
-  } yield Coordinate(x,y) -> Cell(CellType.Floor)).toMap
+  var field = (for {
+    x ← 0 until width
+    y ← 0 until height
+  } yield Coordinate(x, y) -> Cell(CellType.Floor)).toMap
 
   var agentPositions = Map[ActorRef, Coordinate]()
-  var buildingPositions = Map[ActorRef, Coordinate]()
+  var buildingPositions = Map[ActorRef, (Coordinate, BuildingType)]()
 
   val townHall = context.actorOf(TownHall.props(), "town-hall")
-  val townHallLocation = Coordinate(100,100)
-  self ! RegisterBuildingRequest(townHall, townHallLocation)
-
-
+  val townHallLocation = Coordinate(100, 100)
+  self ! RegisterBuildingRequest(townHall, townHallLocation, BuildingType.TownHall)
 
   val framework = Framework.getInstance(FrameworkMode.SOFTWARE)
   val scene = new Scene("vis")
@@ -116,24 +114,24 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
   registerOnTickAction("drawing", () ⇒ {
 
-   for(e <- field){
-     val coordinate = e._1
-     val cell = e._2
-     rectangles(coordinate.x.toInt)(coordinate.y.toInt).setColor(cell.cellType.color)
-   }
+    for (e ← field) {
+      val coordinate = e._1
+      val cell = e._2
+      rectangles(coordinate.x.toInt)(coordinate.y.toInt).setColor(cell.cellType.color)
+    }
 
     val posIt = agentPositions.iterator
 
     while (posIt.hasNext) {
       val next = posIt.next()
-      rectangles(next._2.x.toInt)(next._2.y.toInt).setColor(RGBColor.GREEN)
+      rectangles(next._2.x)(next._2.y).setColor(RGBColor.GREEN)
     }
 
     val buildingsIt = buildingPositions.iterator
 
     while (buildingsIt.hasNext) {
       val next = buildingsIt.next()
-      rectangles(next._2.x.toInt)(next._2.y.toInt).setColor(RGBColor.BLUE)
+      rectangles(next._2._1.x)(next._2._1.y).setColor(RGBColor.BLUE)
     }
 
   })
@@ -145,30 +143,32 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
           bot ! BotAgent.Introduction(townHallLocation)
           bot ! BotAgent.PositionChange(position)
           agentPositions = agentPositions + (bot -> position)
+          townHall.tell(TownHall.RegisterBot, bot)
         }
       } else {
         bot ! PoisonPill
       }
 
-    case RegisterBuildingRequest(ref, position) ⇒
+    case RegisterBuildingRequest(ref, position, buildingType) ⇒
       field.get(position) match {
-        case Some(cell) =>
+        case Some(cell) ⇒
           if (cell.cellType != CellType.Forbidden) {
             ref ! BotAgent.Introduction(townHallLocation)
             ref ! SimulationAgent.PositionChangeRequest(position)
-            buildingPositions = buildingPositions + (ref -> position)
+            val info = (position, buildingType)
+            buildingPositions = buildingPositions + (ref -> info)
+            townHall.tell(TownHall.RegisterBuilding(buildingType), ref)
           }
-        case None =>  ref ! PoisonPill
+        case None ⇒ ref ! PoisonPill
       }
 
-
     case CellTypeChangeRequest(coordinate, cellType) ⇒
-      for(cell <- field.get(coordinate)){
+      for (cell ← field.get(coordinate)) {
         field += (coordinate -> Cell(cellType))
       }
 
     case PositionChangeRequest(position) ⇒
-      for(cell <- field.get(position)){
+      for (cell ← field.get(position)) {
         if (cell.cellType != CellType.Forbidden) {
           agentPositions = agentPositions + (sender() -> position)
           sender() ! BotAgent.PositionChange(position)
@@ -182,7 +182,7 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
 
     case VicinityRequest(ref, dis) ⇒
       val pos = agentPositions(ref)
-      val v = VicinityReponse(agentPositions.filter(t ⇒ Utils.manhattanDistance(pos, t._2) <= dis && t._1 != ref), buildingPositions.filter(t ⇒ Utils.manhattanDistance(pos, t._2) < dis && t._1 != ref))
+      val v = VicinityReponse(agentPositions.filter(t ⇒ Utils.manhattanDistance(pos, t._2) <= dis && t._1 != ref), buildingPositions.filter(t ⇒ Utils.manhattanDistance(pos, t._2._1) < dis && t._1 != ref))
       sender() ! v
 
     case CellRequest(ref) ⇒
@@ -190,15 +190,15 @@ class SimulationAgent(val width: Int, val height: Int) extends Agent {
       sender() ! field(position)
 
     case CellAtIndexRequest(coordinate) ⇒
-      for(cell <- field.get(coordinate)){
+      for (cell ← field.get(coordinate)) {
         sender() ! cell
       }
     case UnregisterRequest ⇒
       agentPositions = agentPositions - sender()
 
-    case VisibleCellsRequest(ref, distance) =>
+    case VisibleCellsRequest(ref, distance) ⇒
       val position = agentPositions(ref)
-      val cells = field.filter(e => Utils.manhattanDistance(position, e._1) <= distance).toMap
+      val cells = field.filter(e ⇒ Utils.manhattanDistance(position, e._1) <= distance).toMap
       sender() ! cells
 
   }
@@ -231,9 +231,9 @@ class Simulation(val width: Int, val height: Int)(implicit system: ActorSystem) 
     Bot(bot)
   }
 
-  def spawnBuilding[T <: Building](cls: Class[T], position: Coordinate): ActorRef = {
+  def spawnBuilding[T <: Building](cls: Class[T], position: Coordinate, buildingType: BuildingType): ActorRef = {
     val building = system.actorOf(Props(cls))
-    sim ! RegisterBuildingRequest(building, position)
+    sim ! RegisterBuildingRequest(building, position, buildingType)
     building
   }
 

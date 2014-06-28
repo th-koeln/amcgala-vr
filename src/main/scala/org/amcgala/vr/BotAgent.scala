@@ -2,7 +2,7 @@ package org.amcgala.vr
 
 import akka.actor.{ Stash, PoisonPill, ActorRef }
 import org.amcgala.vr.Headings.Heading
-import org.amcgala.vr.SimulationAgent.{CellRequest, VicinityReponse}
+import org.amcgala.vr.SimulationAgent.{ CellRequest, VicinityReponse }
 import scala.concurrent.{ ExecutionContext, Future }
 import akka.pattern.ask
 import akka.util.Timeout
@@ -73,8 +73,8 @@ trait BotAgent extends Agent with Stash {
   var heading: Heading = Headings.Up
   var velocity: Int = 1
   var simulation: ActorRef = ActorRef.noSender
-  
-  private var thLocation = Coordinate(0,0)
+
+  private var thLocation = Coordinate(0, 0)
 
   val brain = new Brain(Bot(self))
 
@@ -99,7 +99,7 @@ trait BotAgent extends Agent with Stash {
     case Introduction(townhall) ⇒
       simulation = sender()
       thLocation = townhall
-     
+
     case PositionChange(pos) ⇒
       localPosition = pos
       context.become(defaultHandling)
@@ -120,20 +120,20 @@ trait BotAgent extends Agent with Stash {
       for (r ← brain.executeTask(t)) {
         requester ! r
       }
-    case VicinityRequest(distance) =>
+    case VicinityRequest(distance) ⇒
       val requester = sender()
-      for(v <- vicinity(distance)){
+      for (v ← vicinity(distance)) {
         requester ! v
       }
-    case VisibleCellsRequest(distance) =>
+    case VisibleCellsRequest(distance) ⇒
       val requester = sender()
-      for(v <- visibleCells(distance)) requester ! v
+      for (v ← visibleCells(distance)) requester ! v
     case TimeRequest ⇒
       sender() ! currentTime
-    case TownHallLocationRequest => sender() ! thLocation
-    case CellRequest =>
+    case TownHallLocationRequest ⇒ sender() ! thLocation
+    case CellRequest ⇒
       val requester = sender()
-      for(c <- cell()) requester ! c
+      for (c ← cell()) requester ! c
   }
 
   protected def needHandling: Receive = {
@@ -144,15 +144,15 @@ trait BotAgent extends Agent with Stash {
   protected def positionHandling: Receive = {
     case PositionChange(pos) ⇒
       localPosition = pos
-    case HeadingRequest         ⇒ sender() ! heading
-    case TurnLeft               ⇒
+    case HeadingRequest ⇒ sender() ! heading
+    case TurnLeft ⇒
       turnLeft()
-    case TurnRight              ⇒
+    case TurnRight ⇒
       turnRight()
-    case MoveBackward           ⇒  moveBackward()
-    case MoveForward            ⇒  moveForward()
-    case MoveToPosition(pos)    ⇒  moveToPosition(pos)
-    case ChangeVelocity(vel)    ⇒  velocity = vel
+    case MoveBackward           ⇒ moveBackward()
+    case MoveForward            ⇒ moveForward()
+    case MoveToPosition(pos)    ⇒ moveToPosition(pos)
+    case ChangeVelocity(vel)    ⇒ velocity = vel
     case CurrentPositionRequest ⇒ sender() ! localPosition
   }
 
@@ -266,7 +266,7 @@ trait BotAgent extends Agent with Stash {
   def registerNeed(need: Need) = brain.registerNeed(need)
 
   def registerJob(job: Behavior) = brain.registerJob(job)
-  
+
   def townHallLocation: Coordinate = thLocation
 }
 
@@ -369,7 +369,7 @@ case class Bot(ref: ActorRef) {
 
   def vicinity(distance: Int): Future[VicinityReponse] = (ref ? VicinityRequest(distance)).mapTo[VicinityReponse]
 
-  def townHall = (ref ? TownHallLocationRequest).mapTo[Coordinate]
+  def townHallCoordinate = (ref ? TownHallLocationRequest).mapTo[Coordinate]
 
   def currentCell: Future[Cell] = (ref ? CellRequest).mapTo[Cell]
 

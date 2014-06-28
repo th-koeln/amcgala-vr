@@ -41,7 +41,6 @@ object BresenhamIterator {
 
 object LocationService {
 
-
   class FindLocationTask(val buildingType: BuildingType)(implicit val bot: Bot) extends Task {
     type Return = Coordinate
     import scala.concurrent._
@@ -68,7 +67,7 @@ object LocationService {
       } else {
         bot.moveToPosition(coordinate)
         done()
-        for(c <- bot.currentCell) result success c
+        for (c ← bot.currentCell) result success c
       }
     }
 

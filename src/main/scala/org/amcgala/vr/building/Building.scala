@@ -1,6 +1,7 @@
 package org.amcgala.vr.building
 
-import org.amcgala.vr.{Coordinate, SimulationAgent, Agent}
+import org.amcgala.vr.HeartBeat.Tick
+import org.amcgala.vr.{ Coordinate, SimulationAgent, Agent }
 import akka.actor.{ Stash, ActorRef }
 import org.amcgala.vr.SimulationAgent.PositionChangeRequest
 import org.amcgala.vr.BotAgent.Introduction
@@ -27,18 +28,18 @@ trait Building extends Agent with Stash {
   }
 
   def receive: Receive = {
-    case Introduction ⇒
+    case Introduction(townhall) ⇒
       simulation = sender()
     case PositionChangeRequest(pos) ⇒
       localPosition = pos
-      context.become(common orElse taskHandling)
+      context.become(common orElse tickHandling orElse taskHandling)
       unstashAll()
     case _ ⇒ stash()
   }
 
   def common: Receive = {
-    case RegisterOwner(o) ⇒ owner = Some(o)
-    case ChangeOrientation(o) => orientation = o
+    case RegisterOwner(o)     ⇒ owner = Some(o)
+    case ChangeOrientation(o) ⇒ orientation = o
   }
 
   val taskHandling: Receive
@@ -48,7 +49,8 @@ trait Building extends Agent with Stash {
 sealed trait BuildingType
 
 object BuildingType {
-
   case object Restaurant extends BuildingType
-
+  case object TownHall extends BuildingType
+  case object Hospital extends BuildingType
+  case object LivingQuarter extends BuildingType
 }
